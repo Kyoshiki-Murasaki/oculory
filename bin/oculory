@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+exec node --experimental-sqlite --no-warnings "$(dirname "$0")/../dist/src/cli/main.js" "$@"

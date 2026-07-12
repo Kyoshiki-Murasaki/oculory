@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+
+# Build and coverage
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Oculory local evidence and runtime state
+.oculory/
+.oculory-*/
+runs-live/
+runs-external/
+runs-model/
+
+# Archives, bundles, and local exports
+*.bundle
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+tmp/
+temp/
+.cache/
+.DS_Store
+
+# Language/tool caches
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Editor settings
+.idea/
+.vscode/

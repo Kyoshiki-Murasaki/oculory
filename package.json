@@ -1,0 +1,45 @@
+{
+  "name": "oculory",
+  "version": "0.1.0",
+  "description": "Trace-derived, deterministic-first regression testing for MCP servers",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "bin": {
+    "oculory": "./bin/oculory"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && NODE_OPTIONS=\"--experimental-sqlite --no-warnings\" node --test \"dist/test/**/*.test.js\"",
+    "test:external-git-spike": "npm run build && node dist/test/support/run-git-mcp-spike.js",
+    "test:external-git-formal-gate-b": "npm run build && node dist/test/support/run-git-mcp-formal-gate-b.js",
+    "test:external-git-formal-gate-b-attempt": "npm run build && node dist/test/support/run-git-mcp-formal-gate-b.js",
+    "test:external-git-gate-c": "npm run build && node dist/test/support/run-git-mcp-gate-c.js",
+    "test:git-gate-d": "npm run build && node dist/test/support/run-git-mcp-gate-d.js",
+    "test:external-git-gate-e1": "npm run build && node dist/test/support/run-git-mcp-gate-e1.js",
+    "compile:external-git-gate-e2-suite": "npm run build && node dist/test/support/compile-git-gate-e2-suite.js",
+    "write:external-git-gate-e2-registry": "npm run build && node dist/test/support/write-git-gate-e2-registry.js",
+    "test:external-git-gate-e2": "npm run build && node dist/test/support/run-git-mcp-gate-e2.js",
+    "validate:gate-f-authorization": "npm run build && node dist/test/support/validate-gate-f-authorization.js authorizations/gate-f1-authorization-template.json",
+    "test:gate-f0": "npm run build && NODE_OPTIONS=\"--experimental-sqlite --no-warnings\" node --test \"dist/test/gate-f0*.test.js\"",
+    "test:external-git-gate-f0": "npm run build && node dist/test/support/run-git-mcp-gate-f0.js",
+    "validate:phase6-evidence-index": "npm run build && node dist/test/support/validate-phase6-evidence-index.js docs/evidence/phase6-external-git-evidence-index-v1.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "experiment": "bash experiments/run_experiment.sh"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "typescript": "^6.0.0"
+  },
+  "files": [
+    "dist/src",
+    "bin",
+    "fixtures",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ]
+}

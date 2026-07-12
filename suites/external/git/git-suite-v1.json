@@ -1,0 +1,133 @@
+{
+  "schema": "git-external-suite-v1",
+  "suiteId": "git-suite-v1",
+  "version": 1,
+  "suiteSha256": "39b1d5065b4c058d9762683cac5abb8f2a47c31ae97e4929ef64ec5a68498290",
+  "candidatePackageSha256": "ec1b4f9f870fb5fef68aa5994dc932d8e4157b52b739097cead1aca684854740",
+  "reviewArtifactDigest": "1304d9828d116581fec1692ef75ae7a3f04ff02ef09153b484f68d006875947b",
+  "reviewId": "git-gate-e1-candidate-review-v1",
+  "approvedCandidateIds": [
+    "git-cand-514fac8b126e",
+    "git-cand-5f985ca6af7d",
+    "git-cand-6d85a493c006",
+    "git-cand-7795e229e945",
+    "git-cand-970b53354b15",
+    "git-cand-ad763acaa2e6",
+    "git-cand-e1226b984f8c",
+    "git-cand-f0b0aa748842"
+  ],
+  "rejectedCandidateIds": [
+    "git-cand-18ea17797c83",
+    "git-cand-ee04c8e75603"
+  ],
+  "authoritativeGateE1RunId": "git-gate-e1-scripted-20260712T033640Z",
+  "sourceTraceIds": [
+    "ext-0699b227088bb9270e7e",
+    "ext-09725573d521f82dbe9b",
+    "ext-180d88fe75d91a6bbf02",
+    "ext-2c28fd39dda40290f7f0",
+    "ext-3480185c7a2ea2e9b7fb",
+    "ext-3816960868f956c7437b",
+    "ext-53805a5a1ae12ad09c57",
+    "ext-6e2808ac91f5906f8628",
+    "ext-76869cab0217c24f2ce0",
+    "ext-78cb9b945cae14c0c8fb",
+    "ext-7d7572ca916447f3bde9",
+    "ext-8f1eee726808fb5cb200",
+    "ext-9614009cfb1463b16b7a",
+    "ext-a46679ba8ea16aca821d",
+    "ext-c9f27dcb870b319e68f9",
+    "ext-cf94b91644a7751696aa",
+    "ext-e2e837b2798dd5538b60",
+    "ext-e9cb58f4d94bff722c98"
+  ],
+  "miningScenarioIds": [
+    "git-branch-m1",
+    "git-branch-m2",
+    "git-branch-m3",
+    "git-stage-m1",
+    "git-stage-m2",
+    "git-stage-m3"
+  ],
+  "target": {
+    "id": "mcp-server-git",
+    "version": "2026.7.10",
+    "wheelSha256": "6eb8bb2cca00f39e7bf9752472268c2a037579d59d1373b2fb89cc606060fad5",
+    "installedSourceSha256": "52325521ec8ec00297248fa03eaee6802b9cad3ec1e5bebee25971e1b897d56e",
+    "executableSha256": "a0160dc245aad4c31850be92af9b37b32f00675ef2ab4644ab108ca9eed26bdc",
+    "dependencyLockSha256": "5f7f42f1f4b40051836ce7a308e8e4206a87032edf9bc4cc19e9e2ec75a02b63"
+  },
+  "artifactHashes": {
+    "wheelSha256": "6eb8bb2cca00f39e7bf9752472268c2a037579d59d1373b2fb89cc606060fad5",
+    "installedSourceSha256": "52325521ec8ec00297248fa03eaee6802b9cad3ec1e5bebee25971e1b897d56e",
+    "executableSha256": "a0160dc245aad4c31850be92af9b37b32f00675ef2ab4644ab108ca9eed26bdc",
+    "dependencyLockSha256": "5f7f42f1f4b40051836ce7a308e8e4206a87032edf9bc4cc19e9e2ec75a02b63"
+  },
+  "toolInventoryDigest": "fdcbe98d820cf91b2815c2d232545dd463d3633abe3ba8aee46116b576afc62d",
+  "rawDiscoveryDigest": "30275c9e38df011399f17fce9b7e6f762e974b687d86a69020e217ad12330442",
+  "toolSchemaDigests": {
+    "git_status": "7787e2a97eefcd2732e282e8dcc8cd9219788587d4933f34940ba33f3c5c5a2e",
+    "git_diff_unstaged": "032b059faeb5b9810d9941eaf4c62b331685e49a0bc48fdaf0bb4c00bee3f677",
+    "git_diff_staged": "48eb42b8f643b75aca966c127b458e4b0e23611bba8097dcc965d699188332d1",
+    "git_diff": "637344c71d370a96cfe77ad81bbb7672637a649524f25d5445316db996e927b0",
+    "git_commit": "75374f9754dc66a3496b158e7d20aa5dae700fa631e00673c7fba63c1ca5aed6",
+    "git_add": "133fd218c7e83aa5dbdd56c75bead1a53d20c842c97f57dbac318b7bc7b49aa2",
+    "git_reset": "86fba998411abf22305ade791102e0dfaa88ca1c20da2ee73a994eee358bd340",
+    "git_log": "782b3a418610360414ad396aac5a0e31786f6fe14ee9755723880ce1f8c2c4fe",
+    "git_create_branch": "bb46d952e3306ba9068f7bc9e7892d515eec1ece9005d23602d3bcb51070cf05",
+    "git_checkout": "4ab7d39d3db4317b930371c39164a78b5686e7c4046505608a23185f05a67e5a",
+    "git_show": "208ede6a3f3c38b1811aaa9577683e4ceb616c51a15d079aa3b0d67a858969a5",
+    "git_branch": "9726dbd1d09733ca68ac5acab9ed23fd33de3adec4ebbd3b06628ebc91eca162"
+  },
+  "adapterVersion": "git-scripted-adapter-v1",
+  "fixture": {
+    "version": "git-spike-seed-v1",
+    "digest": "a70438e717458e60bbc7e060934cbfbead480d3ab8f2ebac0c013f13fcab4c6c"
+  },
+  "verifierVersion": "git-verifier-v1",
+  "catalogue": {
+    "version": "git-gate-e1-catalogue-v1",
+    "digest": "ad6904504451951e40f5cee9e31a3d7ca968e1e9f2d7470d49d6e5b66d9dd8a1"
+  },
+  "minerVersion": "git-miner-v1",
+  "schemaVersion": "external-trace-v3",
+  "normalizationRules": [
+    "registered fixture root -> <FIXTURE_ROOT>",
+    "registered sibling root -> <SIBLING_ROOT>",
+    "registered trial root -> <TRIAL_ROOT>",
+    "monotonic timing excluded from semantic equality",
+    "reflog timestamp/timezone presentation excluded while raw digest retained",
+    "sentinel mtime excluded while bytes/mode/raw metadata retained",
+    "GitPython tzoffset object address -> <GITPYTHON_TZOFFSET_OBJECT>"
+  ],
+  "replayPolicy": {
+    "freshProcess": true,
+    "freshFixture": true,
+    "freshTrialRoot": true,
+    "serial": true,
+    "retriesReplaceCanonicalTrials": false,
+    "trialsPerScenario": 3,
+    "suiteAndGoldenSeparated": true,
+    "cleanup": "CP-1"
+  },
+  "eligibleHoldoutFamilies": [
+    "git-stage",
+    "git-branch-create"
+  ],
+  "eligibleHoldoutScenarioIds": [
+    "git-stage-h1",
+    "git-branch-h1"
+  ],
+  "compilerVersion": "git-suite-compiler-v1",
+  "sourceCommit": "6270926be62286a15b540982cb74b4d34b65b020",
+  "contracts": [
+    {
+      "contractId": "git-stage-contract-v1",
+      "digest": "8d6767e0a14be530996c9f1cb2d65406f06f50048ac167219ee4771dd4e68865"
+    },
+    {
+      "contractId": "git-branch-create-contract-v1",
+      "digest": "bdd4360f65c68a9e84500d1b65db29bd952207e3edbce2853700721eeaaa7cfa"
+    }
+  ]
+}

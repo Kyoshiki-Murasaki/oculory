@@ -1,0 +1,2 @@
+# Contributing
+Node ≥ 22.13. `npm install && npm test` must be green before and after your change (26 tests, deterministic — flaky tests are treated as bugs). Strict TypeScript, no `any`, no runtime dependencies without discussion. Every persisted format change bumps `schema_version` and adds a migration note in docs/04. New assertion types need: mining rule (docs/07), evaluator semantics, anti-overfit analysis, and tests including a holdout-generalisation case.

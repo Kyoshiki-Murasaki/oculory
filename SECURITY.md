@@ -1,0 +1,2 @@
+# Security policy
+Local-first tool; no network services. Report vulnerabilities via a private GitHub security advisory on this repository. Do not file public issues for security reports. Traces may contain sensitive intent text: the normaliser applies minimal redaction only — do NOT import or share real production traces until the docs/13 pre-import gate is implemented (the `import` command is intentionally absent).

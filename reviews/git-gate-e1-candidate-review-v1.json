@@ -1,0 +1,31 @@
+{
+  "schema": "git-candidate-review-v1",
+  "reviewId": "git-gate-e1-candidate-review-v1",
+  "reviewer": "Dev",
+  "decisionSource": "explicit human candidate-ID authorization in the Gate E2 task prompt",
+  "candidatePackageSha256": "ec1b4f9f870fb5fef68aa5994dc932d8e4157b52b739097cead1aca684854740",
+  "authoritativeGateE1RunId": "git-gate-e1-scripted-20260712T033640Z",
+  "catalogueDigest": "ad6904504451951e40f5cee9e31a3d7ca968e1e9f2d7470d49d6e5b66d9dd8a1",
+  "minerVersion": "git-miner-v1",
+  "reviewTimestamp": "2026-07-12T08:29:23Z",
+  "approvedIds": [
+    "git-cand-514fac8b126e",
+    "git-cand-5f985ca6af7d",
+    "git-cand-6d85a493c006",
+    "git-cand-7795e229e945",
+    "git-cand-970b53354b15",
+    "git-cand-ad763acaa2e6",
+    "git-cand-e1226b984f8c",
+    "git-cand-f0b0aa748842"
+  ],
+  "rejectedIds": [
+    "git-cand-18ea17797c83",
+    "git-cand-ee04c8e75603"
+  ],
+  "rationale": {
+    "approved": "The eight named candidates encode required mutating tools, intent-entity argument mappings, independently verified selected-state postconditions, and verified outcomes without exhaustive tool-path constraints.",
+    "rejected": "They encode exact observed scripted path alternatives; leave-one-out analysis narrowed those paths; they may encode driver style rather than necessary semantics; approving them would risk rejecting valid alternate trajectories."
+  },
+  "scopeOfApproval": "Blocking Gate E2 stage and branch-creation contract assertions only. Rejected candidates remain advisory evidence and are not approved, blocking, or compilable.",
+  "cryptographicSignatureClaim": false
+}

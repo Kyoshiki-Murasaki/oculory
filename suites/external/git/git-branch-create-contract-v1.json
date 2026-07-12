@@ -1,0 +1,137 @@
+{
+  "schema": "git-contract-v1",
+  "contractId": "git-branch-create-contract-v1",
+  "family": "git-branch-create",
+  "blocking": true,
+  "candidateIds": [
+    "git-cand-f0b0aa748842",
+    "git-cand-7795e229e945",
+    "git-cand-970b53354b15",
+    "git-cand-ad763acaa2e6"
+  ],
+  "assertions": [
+    {
+      "candidateId": "git-cand-f0b0aa748842",
+      "assertionType": "required_tool",
+      "generalizedPredicate": {
+        "tool": "git_create_branch",
+        "requirement": "required"
+      },
+      "distinctScenarioSupport": 3,
+      "trialSupport": 9,
+      "provenanceTraceIds": [
+        "ext-0699b227088bb9270e7e",
+        "ext-3480185c7a2ea2e9b7fb",
+        "ext-3816960868f956c7437b",
+        "ext-53805a5a1ae12ad09c57",
+        "ext-76869cab0217c24f2ce0",
+        "ext-7d7572ca916447f3bde9",
+        "ext-8f1eee726808fb5cb200",
+        "ext-a46679ba8ea16aca821d",
+        "ext-e9cb58f4d94bff722c98"
+      ],
+      "scenarioIds": [
+        "git-branch-m1",
+        "git-branch-m2",
+        "git-branch-m3"
+      ],
+      "evidenceDigest": "8a87b33797815452453c9b61c5f544f4963662bcee3bb103679a90d473e0091b"
+    },
+    {
+      "candidateId": "git-cand-7795e229e945",
+      "assertionType": "argument_entity_mapping",
+      "generalizedPredicate": {
+        "tool": "git_create_branch",
+        "argument": "branch_name",
+        "equals": "@entity:branch"
+      },
+      "distinctScenarioSupport": 3,
+      "trialSupport": 9,
+      "provenanceTraceIds": [
+        "ext-0699b227088bb9270e7e",
+        "ext-3480185c7a2ea2e9b7fb",
+        "ext-3816960868f956c7437b",
+        "ext-53805a5a1ae12ad09c57",
+        "ext-76869cab0217c24f2ce0",
+        "ext-7d7572ca916447f3bde9",
+        "ext-8f1eee726808fb5cb200",
+        "ext-a46679ba8ea16aca821d",
+        "ext-e9cb58f4d94bff722c98"
+      ],
+      "scenarioIds": [
+        "git-branch-m1",
+        "git-branch-m2",
+        "git-branch-m3"
+      ],
+      "evidenceDigest": "f1cc9915708155d24ffc03cc690177b9a1641ff30f0e05d961addcadf98cced8"
+    },
+    {
+      "candidateId": "git-cand-970b53354b15",
+      "assertionType": "selected_ref_postcondition",
+      "generalizedPredicate": {
+        "selector": "refs/heads/@entity:branch",
+        "condition": "created_at_initial_head",
+        "changed_ref_cardinality": 1,
+        "symbolic_head": "unchanged"
+      },
+      "distinctScenarioSupport": 3,
+      "trialSupport": 9,
+      "provenanceTraceIds": [
+        "ext-0699b227088bb9270e7e",
+        "ext-3480185c7a2ea2e9b7fb",
+        "ext-3816960868f956c7437b",
+        "ext-53805a5a1ae12ad09c57",
+        "ext-76869cab0217c24f2ce0",
+        "ext-7d7572ca916447f3bde9",
+        "ext-8f1eee726808fb5cb200",
+        "ext-a46679ba8ea16aca821d",
+        "ext-e9cb58f4d94bff722c98"
+      ],
+      "scenarioIds": [
+        "git-branch-m1",
+        "git-branch-m2",
+        "git-branch-m3"
+      ],
+      "evidenceDigest": "78b69d1ba902f4df265afc626f58f17526a27ea610a6a3cdcd534e6f7d329b48"
+    },
+    {
+      "candidateId": "git-cand-ad763acaa2e6",
+      "assertionType": "no_error_and_verified_outcome",
+      "generalizedPredicate": {
+        "tool_error_count": 0,
+        "verifier_outcome": "verified_success",
+        "unexpected_changed_layers": 0
+      },
+      "distinctScenarioSupport": 3,
+      "trialSupport": 9,
+      "provenanceTraceIds": [
+        "ext-0699b227088bb9270e7e",
+        "ext-3480185c7a2ea2e9b7fb",
+        "ext-3816960868f956c7437b",
+        "ext-53805a5a1ae12ad09c57",
+        "ext-76869cab0217c24f2ce0",
+        "ext-7d7572ca916447f3bde9",
+        "ext-8f1eee726808fb5cb200",
+        "ext-a46679ba8ea16aca821d",
+        "ext-e9cb58f4d94bff722c98"
+      ],
+      "scenarioIds": [
+        "git-branch-m1",
+        "git-branch-m2",
+        "git-branch-m3"
+      ],
+      "evidenceDigest": "848cf1c77083260cab840b810e1e3d7dedc6c327e625346932c52f5f6265712a"
+    }
+  ],
+  "permitsNonExhaustiveToolPaths": true,
+  "permittedExamples": [
+    [
+      "git_create_branch"
+    ],
+    [
+      "git_branch",
+      "git_create_branch"
+    ]
+  ],
+  "digest": "bdd4360f65c68a9e84500d1b65db29bd952207e3edbce2853700721eeaaa7cfa"
+}

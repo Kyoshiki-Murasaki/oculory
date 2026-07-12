@@ -1,0 +1,141 @@
+{
+  "schema": "git-contract-v1",
+  "contractId": "git-stage-contract-v1",
+  "family": "git-stage",
+  "blocking": true,
+  "candidateIds": [
+    "git-cand-e1226b984f8c",
+    "git-cand-514fac8b126e",
+    "git-cand-6d85a493c006",
+    "git-cand-5f985ca6af7d"
+  ],
+  "assertions": [
+    {
+      "candidateId": "git-cand-e1226b984f8c",
+      "assertionType": "required_tool",
+      "generalizedPredicate": {
+        "tool": "git_add",
+        "requirement": "required"
+      },
+      "distinctScenarioSupport": 3,
+      "trialSupport": 9,
+      "provenanceTraceIds": [
+        "ext-09725573d521f82dbe9b",
+        "ext-180d88fe75d91a6bbf02",
+        "ext-2c28fd39dda40290f7f0",
+        "ext-6e2808ac91f5906f8628",
+        "ext-78cb9b945cae14c0c8fb",
+        "ext-9614009cfb1463b16b7a",
+        "ext-c9f27dcb870b319e68f9",
+        "ext-cf94b91644a7751696aa",
+        "ext-e2e837b2798dd5538b60"
+      ],
+      "scenarioIds": [
+        "git-stage-m1",
+        "git-stage-m2",
+        "git-stage-m3"
+      ],
+      "evidenceDigest": "a1b3f6f58c0d0ad3fcd16d8e4ac67e133b92ccccc69f2a7eab71d82d1c9a9015"
+    },
+    {
+      "candidateId": "git-cand-514fac8b126e",
+      "assertionType": "argument_entity_mapping",
+      "generalizedPredicate": {
+        "tool": "git_add",
+        "argument": "files[0]",
+        "equals": "@entity:path"
+      },
+      "distinctScenarioSupport": 3,
+      "trialSupport": 9,
+      "provenanceTraceIds": [
+        "ext-09725573d521f82dbe9b",
+        "ext-180d88fe75d91a6bbf02",
+        "ext-2c28fd39dda40290f7f0",
+        "ext-6e2808ac91f5906f8628",
+        "ext-78cb9b945cae14c0c8fb",
+        "ext-9614009cfb1463b16b7a",
+        "ext-c9f27dcb870b319e68f9",
+        "ext-cf94b91644a7751696aa",
+        "ext-e2e837b2798dd5538b60"
+      ],
+      "scenarioIds": [
+        "git-stage-m1",
+        "git-stage-m2",
+        "git-stage-m3"
+      ],
+      "evidenceDigest": "28fb80624d90c62aea6c68e4ae207799965debc501a4c06d248a93c5bc46bb7d"
+    },
+    {
+      "candidateId": "git-cand-6d85a493c006",
+      "assertionType": "selected_index_postcondition",
+      "generalizedPredicate": {
+        "selector": "@entity:path",
+        "condition": "index_blob_equals_worktree_blob",
+        "changed_index_path_cardinality": 1
+      },
+      "distinctScenarioSupport": 3,
+      "trialSupport": 9,
+      "provenanceTraceIds": [
+        "ext-09725573d521f82dbe9b",
+        "ext-180d88fe75d91a6bbf02",
+        "ext-2c28fd39dda40290f7f0",
+        "ext-6e2808ac91f5906f8628",
+        "ext-78cb9b945cae14c0c8fb",
+        "ext-9614009cfb1463b16b7a",
+        "ext-c9f27dcb870b319e68f9",
+        "ext-cf94b91644a7751696aa",
+        "ext-e2e837b2798dd5538b60"
+      ],
+      "scenarioIds": [
+        "git-stage-m1",
+        "git-stage-m2",
+        "git-stage-m3"
+      ],
+      "evidenceDigest": "a4ee4671e2c9c6301b5b288b3b2739fd63f5d48dc9d7ae5fb489475a34595282"
+    },
+    {
+      "candidateId": "git-cand-5f985ca6af7d",
+      "assertionType": "no_error_and_verified_outcome",
+      "generalizedPredicate": {
+        "tool_error_count": 0,
+        "verifier_outcome": "verified_success",
+        "unexpected_changed_layers": 0
+      },
+      "distinctScenarioSupport": 3,
+      "trialSupport": 9,
+      "provenanceTraceIds": [
+        "ext-09725573d521f82dbe9b",
+        "ext-180d88fe75d91a6bbf02",
+        "ext-2c28fd39dda40290f7f0",
+        "ext-6e2808ac91f5906f8628",
+        "ext-78cb9b945cae14c0c8fb",
+        "ext-9614009cfb1463b16b7a",
+        "ext-c9f27dcb870b319e68f9",
+        "ext-cf94b91644a7751696aa",
+        "ext-e2e837b2798dd5538b60"
+      ],
+      "scenarioIds": [
+        "git-stage-m1",
+        "git-stage-m2",
+        "git-stage-m3"
+      ],
+      "evidenceDigest": "dddd7e9b2867c9d0f110d43d6243cfb8451d95581ad6dc068a2bcd78763cf0d8"
+    }
+  ],
+  "permitsNonExhaustiveToolPaths": true,
+  "permittedExamples": [
+    [
+      "git_add"
+    ],
+    [
+      "git_status",
+      "git_add"
+    ],
+    [
+      "git_diff_unstaged",
+      "git_add",
+      "git_diff_staged"
+    ]
+  ],
+  "digest": "8d6767e0a14be530996c9f1cb2d65406f06f50048ac167219ee4771dd4e68865"
+}

@@ -1,0 +1,15 @@
+{
+  "fixture_id": "seed-v1",
+  "rows": [
+    { "title": "Fix login bug", "status": "open", "priority": "high", "assignee": "alice", "project": "website" },
+    { "title": "Fix login page styling", "status": "open", "priority": "low", "assignee": null, "project": "website" },
+    { "title": "Write onboarding docs", "status": "open", "priority": "medium", "assignee": "bob", "project": "docs" },
+    { "title": "Set up deployment pipeline", "status": "in_progress", "priority": "high", "assignee": "carol", "project": "infra" },
+    { "title": "Review deployment checklist", "status": "open", "priority": "medium", "assignee": null, "project": "infra" },
+    { "title": "Update dependency versions", "status": "open", "priority": "low", "assignee": null, "project": "infra" },
+    { "title": "Archive old reports", "status": "done", "priority": "low", "assignee": "bob", "project": "docs" },
+    { "title": "Plan Q3 roadmap", "status": "in_progress", "priority": "high", "assignee": "alice", "project": "general" },
+    { "title": "Refresh landing page copy", "status": "open", "priority": "medium", "assignee": null, "project": "website" },
+    { "title": "Migrate database backups", "status": "done", "priority": "high", "assignee": "carol", "project": "infra" }
+  ]
+}

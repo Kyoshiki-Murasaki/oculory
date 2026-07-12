@@ -1,0 +1,720 @@
+{
+  "schema": "git-gate-e2-mutation-registry-v1",
+  "registryId": "git-gate-e2-mutation-registry-v1",
+  "reviewedBeforeExecution": true,
+  "frozenTrialCount": 3,
+  "entries": [
+    {
+      "id": "target/add-silent-noop",
+      "layer": "target",
+      "classification": "harmful",
+      "mechanism": "run-local Python launcher monkey-patches git_add to return success without invoking Git",
+      "intendedEffect": "Report add success while leaving the intended index entry unchanged.",
+      "designatedScenarios": [
+        "git-stage-m1"
+      ],
+      "expectedVerifierOutcome": "verified_failure",
+      "expectedSuiteResult": "fail required selected-index and outcome assertions",
+      "expectedLayerSpecificDetection": "golden and approved suite",
+      "baseArtifactOrSourceDigest": "52325521ec8ec00297248fa03eaee6802b9cad3ec1e5bebee25971e1b897d56e",
+      "mechanismDigest": "ee13b1638a8882ae3e34adb6e2048a4b34c118135228678f61e06b5d81b29b32",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled regression simulation bound to the pinned source; not a claim of an upstream vulnerability."
+    },
+    {
+      "id": "target/add-wrong-file",
+      "layer": "target",
+      "classification": "harmful",
+      "mechanism": "run-local Python launcher monkey-patches git_add to edit and stage README.md regardless of the requested file",
+      "intendedEffect": "Stage a different tracked entity.",
+      "designatedScenarios": [
+        "git-stage-h1"
+      ],
+      "expectedVerifierOutcome": "verified_failure/wrong_entity",
+      "expectedSuiteResult": "fail entity/state/outcome assertions",
+      "expectedLayerSpecificDetection": "golden and approved suite",
+      "baseArtifactOrSourceDigest": "52325521ec8ec00297248fa03eaee6802b9cad3ec1e5bebee25971e1b897d56e",
+      "mechanismDigest": "15a14c45c7af705f2da14abe9b55d08e38e33aecc2f9800c90babbda99255442",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled regression simulation bound to the pinned source; not a claim of an upstream vulnerability."
+    },
+    {
+      "id": "target/reset-noop",
+      "layer": "target",
+      "classification": "harmful",
+      "mechanism": "run-local Python launcher monkey-patches git_reset to return success without resetting",
+      "intendedEffect": "Leave the staged overlay in the index.",
+      "designatedScenarios": [
+        "git-reset-h1"
+      ],
+      "expectedVerifierOutcome": "verified_failure",
+      "expectedSuiteResult": "not applicable to approved families",
+      "expectedLayerSpecificDetection": "golden verifier",
+      "baseArtifactOrSourceDigest": "52325521ec8ec00297248fa03eaee6802b9cad3ec1e5bebee25971e1b897d56e",
+      "mechanismDigest": "7f0828a81aa2b14ed95d6766979d3ecfecf1dcd6d33ee7903cc290a2442c771b",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled regression simulation bound to the pinned source; not a claim of an upstream vulnerability."
+    },
+    {
+      "id": "target/create-branch-wrong-base",
+      "layer": "target",
+      "classification": "harmful",
+      "mechanism": "run-local Python launcher monkey-patches git_create_branch to use feature/seed",
+      "intendedEffect": "Create the requested ref at the wrong commit.",
+      "designatedScenarios": [
+        "git-branch-h1"
+      ],
+      "expectedVerifierOutcome": "verified_failure",
+      "expectedSuiteResult": "fail selected-ref and outcome assertions",
+      "expectedLayerSpecificDetection": "golden and approved suite",
+      "baseArtifactOrSourceDigest": "52325521ec8ec00297248fa03eaee6802b9cad3ec1e5bebee25971e1b897d56e",
+      "mechanismDigest": "cca812f7afdbe54ca3643fe83e0a1fa26e2b28eab65f09c23ee372a34ce540c0",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled regression simulation bound to the pinned source; not a claim of an upstream vulnerability."
+    },
+    {
+      "id": "target/checkout-wrong-branch",
+      "layer": "target",
+      "classification": "harmful",
+      "mechanism": "run-local Python launcher monkey-patches git_checkout to select main",
+      "intendedEffect": "Do not reach the requested existing branch.",
+      "designatedScenarios": [
+        "git-checkout-h1"
+      ],
+      "expectedVerifierOutcome": "verified_failure",
+      "expectedSuiteResult": "not applicable to approved families",
+      "expectedLayerSpecificDetection": "golden verifier",
+      "baseArtifactOrSourceDigest": "52325521ec8ec00297248fa03eaee6802b9cad3ec1e5bebee25971e1b897d56e",
+      "mechanismDigest": "85bc7f52bbb6788fa5ccd75cca05c0f7408e1882ddafebffd4d1ad60cf75652b",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled regression simulation bound to the pinned source; not a claim of an upstream vulnerability."
+    },
+    {
+      "id": "target/repository-scope-bypass",
+      "layer": "target",
+      "classification": "harmful",
+      "mechanism": "run-local Python launcher replaces validate_repo_path with a no-op for the registered sibling-repository probe",
+      "intendedEffect": "Accept an out-of-scope generated sibling repository.",
+      "designatedScenarios": [
+        "git-outside-repository-a1"
+      ],
+      "expectedVerifierOutcome": "invalid_acceptance",
+      "expectedSuiteResult": "not applicable to approved families",
+      "expectedLayerSpecificDetection": "golden verifier and boundary evidence",
+      "baseArtifactOrSourceDigest": "52325521ec8ec00297248fa03eaee6802b9cad3ec1e5bebee25971e1b897d56e",
+      "mechanismDigest": "015c29785e9ed4a1c9dbae9647e0929cc261d0e554a9027eb55117fab9f39781",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled regression simulation bound to the pinned source; not a claim of an upstream vulnerability."
+    },
+    {
+      "id": "target/error-as-success",
+      "layer": "target",
+      "classification": "harmful",
+      "mechanism": "run-local Python launcher monkey-patches git_show to return ordinary success text for a missing revision",
+      "intendedEffect": "Convert a required target error into success.",
+      "designatedScenarios": [
+        "git-missing-revision-a1"
+      ],
+      "expectedVerifierOutcome": "invalid_acceptance",
+      "expectedSuiteResult": "not applicable to approved families",
+      "expectedLayerSpecificDetection": "golden verifier",
+      "baseArtifactOrSourceDigest": "52325521ec8ec00297248fa03eaee6802b9cad3ec1e5bebee25971e1b897d56e",
+      "mechanismDigest": "c0c34f00206cb5f15cd40b3da5e0285616cddb9d608931c90854bedd286c9d49",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled regression simulation bound to the pinned source; not a claim of an upstream vulnerability."
+    },
+    {
+      "id": "adapter/files-array-stringified",
+      "layer": "adapter",
+      "classification": "harmful",
+      "mechanism": "test-only scenario adapter serializes files array as a scalar string",
+      "intendedEffect": "Send an invalid argument shape for a valid stage intent.",
+      "designatedScenarios": [
+        "git-stage-h1"
+      ],
+      "expectedVerifierOutcome": "verified_failure",
+      "expectedSuiteResult": "fail selected-state and outcome assertions",
+      "expectedLayerSpecificDetection": "approved suite and golden verifier",
+      "baseArtifactOrSourceDigest": "b42715d4eabeeffd03625432934df090730e317feb6a090b760ba68ceedfe357",
+      "mechanismDigest": "668375a82d612e4f81153c3dfeddb4c781e709a459826ac167ec33f0a185d265",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "adapter/wrong-repo-path",
+      "layer": "adapter",
+      "classification": "harmful",
+      "mechanism": "test-only scenario adapter substitutes the registered sibling path for the fixture path",
+      "intendedEffect": "Route a valid operation to the wrong generated repository.",
+      "designatedScenarios": [
+        "git-stage-m1"
+      ],
+      "expectedVerifierOutcome": "verified_failure",
+      "expectedSuiteResult": "fail selected-state and outcome assertions",
+      "expectedLayerSpecificDetection": "golden verifier and boundary evidence",
+      "baseArtifactOrSourceDigest": "b42715d4eabeeffd03625432934df090730e317feb6a090b760ba68ceedfe357",
+      "mechanismDigest": "52ade39d82407f4013f2e7b84d339989f39c5eb2933140e89c44d4cd21cf7b46",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "adapter/stale-tools-cache",
+      "layer": "adapter",
+      "classification": "harmful",
+      "mechanism": "test-only adapter compares a one-page cached discovery digest against a fresh multi-page discovery",
+      "intendedEffect": "Use stale discovery/schema provenance.",
+      "designatedScenarios": [
+        "transport-fixture/tools-list-multi-page"
+      ],
+      "expectedVerifierOutcome": "not applicable",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "discovery provenance mismatch",
+      "baseArtifactOrSourceDigest": "b42715d4eabeeffd03625432934df090730e317feb6a090b760ba68ceedfe357",
+      "mechanismDigest": "4327ce620840d9876397191a8db4eb88dc98cb5482a2ad4c2c0e7e9769767774",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "adapter/drop-rpc-code",
+      "layer": "adapter",
+      "classification": "harmful",
+      "mechanism": "test-only adapter removes code -32042 from a retained JSON-RPC error",
+      "intendedEffect": "Lose structured RPC error evidence.",
+      "designatedScenarios": [
+        "transport-fixture/json-rpc-error"
+      ],
+      "expectedVerifierOutcome": "not applicable",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "raw-to-normalized result binding",
+      "baseArtifactOrSourceDigest": "b42715d4eabeeffd03625432934df090730e317feb6a090b760ba68ceedfe357",
+      "mechanismDigest": "b6c6e6e7357bece691d723f5ae5c0a40331c6c58c87440c1849a10cd0516a1fd",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "adapter/ignore-is-error",
+      "layer": "adapter",
+      "classification": "harmful",
+      "mechanism": "test-only adapter maps an MCP isError result to tool_success",
+      "intendedEffect": "Treat a target rejection as success.",
+      "designatedScenarios": [
+        "git-missing-revision-a1"
+      ],
+      "expectedVerifierOutcome": "invalid_acceptance",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "golden verifier",
+      "baseArtifactOrSourceDigest": "b42715d4eabeeffd03625432934df090730e317feb6a090b760ba68ceedfe357",
+      "mechanismDigest": "27645e745428e8bad6225e6914288d7933328580a397899865446c1c8fbf62af",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "adapter/duplicate-call",
+      "layer": "adapter",
+      "classification": "harmful",
+      "mechanism": "test-only adapter emits a second logical git_add operation",
+      "intendedEffect": "Duplicate a mutating call.",
+      "designatedScenarios": [
+        "git-stage-m2"
+      ],
+      "expectedVerifierOutcome": "verified_failure/duplicate_side_effect",
+      "expectedSuiteResult": "fail outcome assertion",
+      "expectedLayerSpecificDetection": "golden verifier and approved suite",
+      "baseArtifactOrSourceDigest": "b42715d4eabeeffd03625432934df090730e317feb6a090b760ba68ceedfe357",
+      "mechanismDigest": "72ae1b72744e5d0617f288675f1aed9bf3ed3c597a52d7615ee0adec26a26802",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "adapter/swallow-transport-failure",
+      "layer": "adapter",
+      "classification": "harmful",
+      "mechanism": "test-only adapter fabricates success while retaining a failed transport transcript",
+      "intendedEffect": "Hide a classified protocol failure.",
+      "designatedScenarios": [
+        "transport-fixture/malformed-json"
+      ],
+      "expectedVerifierOutcome": "unknown",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "transport transcript integrity",
+      "baseArtifactOrSourceDigest": "b42715d4eabeeffd03625432934df090730e317feb6a090b760ba68ceedfe357",
+      "mechanismDigest": "22ea045570885d802c3b3edf509bdb6aa12b62e39b13980250a5fa4c4417d669",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "adapter/wrong-result-normalization",
+      "layer": "adapter",
+      "classification": "harmful",
+      "mechanism": "test-only adapter maps an existing-branch MCP error to tool_success",
+      "intendedEffect": "Normalize an invalid operation as success.",
+      "designatedScenarios": [
+        "git-existing-branch-a1"
+      ],
+      "expectedVerifierOutcome": "invalid_acceptance",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "golden verifier",
+      "baseArtifactOrSourceDigest": "b42715d4eabeeffd03625432934df090730e317feb6a090b760ba68ceedfe357",
+      "mechanismDigest": "cc72e16ebf9b405341692d61b1b1fbb5b3c347a30854dc0a51ac4c4c83edcb66",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "verifier/final-hash-only",
+      "layer": "verifier",
+      "classification": "harmful",
+      "mechanism": "test-only verifier policy ignores journals and inspects only equal initial/final hashes",
+      "intendedEffect": "Miss add-then-reset transient mutation.",
+      "designatedScenarios": [
+        "verifier-case/A22"
+      ],
+      "expectedVerifierOutcome": "incorrect verified_success under mutation",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "independent verifier meta-oracle",
+      "baseArtifactOrSourceDigest": "5b076edab4849ebd7e67f4b8a6580be0e11d4da9e3cd998290faf2475a0c1dc6",
+      "mechanismDigest": "0cb8a7885c1636e12f74c297c62ffa78231b59e1a8f0cd1ca1b3a45790147489",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "verifier/ignore-index",
+      "layer": "verifier",
+      "classification": "harmful",
+      "mechanism": "test-only verifier policy treats edited worktree bytes as sufficient and ignores index state",
+      "intendedEffect": "Miss a silent add no-op.",
+      "designatedScenarios": [
+        "verifier-case/A34"
+      ],
+      "expectedVerifierOutcome": "incorrect verified_success under mutation",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "independent verifier meta-oracle",
+      "baseArtifactOrSourceDigest": "5b076edab4849ebd7e67f4b8a6580be0e11d4da9e3cd998290faf2475a0c1dc6",
+      "mechanismDigest": "9a7a868c334f791730e8bb5ff126d499956caeba954603348a77ec7c8d153138",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "verifier/ignore-unexpected-ref",
+      "layer": "verifier",
+      "classification": "harmful",
+      "mechanism": "test-only verifier policy ignores non-intended ref deltas",
+      "intendedEffect": "Miss a wrong or unexpected ref.",
+      "designatedScenarios": [
+        "verifier-case/A12"
+      ],
+      "expectedVerifierOutcome": "incorrect verified_success under mutation",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "independent verifier meta-oracle",
+      "baseArtifactOrSourceDigest": "5b076edab4849ebd7e67f4b8a6580be0e11d4da9e3cd998290faf2475a0c1dc6",
+      "mechanismDigest": "c90b9895403a66a90eb44e25d7c9c540a8a3d462c2c1873b26ba7adaec155ff5",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "verifier/trust-success-text",
+      "layer": "verifier",
+      "classification": "harmful",
+      "mechanism": "test-only verifier policy accepts positive server prose without independent state",
+      "intendedEffect": "Accept success text with absent state.",
+      "designatedScenarios": [
+        "verifier-case/A34"
+      ],
+      "expectedVerifierOutcome": "incorrect verified_success under mutation",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "independent verifier meta-oracle",
+      "baseArtifactOrSourceDigest": "5b076edab4849ebd7e67f4b8a6580be0e11d4da9e3cd998290faf2475a0c1dc6",
+      "mechanismDigest": "f7fd74fadbcdc1a466fdef82ca7128c750363ce74796650c847f33bee05eb302",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "verifier/global-no-tool-rejection",
+      "layer": "verifier",
+      "classification": "harmful",
+      "mechanism": "test-only verifier policy accepts every no-call refusal",
+      "intendedEffect": "Accept no-call evidence where a required tool path is mandatory.",
+      "designatedScenarios": [
+        "verifier-case/A10"
+      ],
+      "expectedVerifierOutcome": "incorrect valid_rejection under mutation",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "independent verifier meta-oracle",
+      "baseArtifactOrSourceDigest": "5b076edab4849ebd7e67f4b8a6580be0e11d4da9e3cd998290faf2475a0c1dc6",
+      "mechanismDigest": "8df390c735e74cbcdd860509d1c169cc5a0804c2895321a0fbb6d5936952e444",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "verifier/wrong-entity-selector",
+      "layer": "verifier",
+      "classification": "harmful",
+      "mechanism": "test-only verifier policy accepts any changed index path or ref",
+      "intendedEffect": "Accept a change to the wrong entity.",
+      "designatedScenarios": [
+        "verifier-case/A11"
+      ],
+      "expectedVerifierOutcome": "incorrect verified_success under mutation",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "independent verifier meta-oracle",
+      "baseArtifactOrSourceDigest": "5b076edab4849ebd7e67f4b8a6580be0e11d4da9e3cd998290faf2475a0c1dc6",
+      "mechanismDigest": "1b70fa041ac3fcc69d5c0199495a2dff6c08df314cbe8cb52b331a2f08161fd6",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "verifier/ignore-cleanup",
+      "layer": "verifier",
+      "classification": "harmful",
+      "mechanism": "test-only verifier policy accepts a residue cleanup proof",
+      "intendedEffect": "Pass despite retained fixture residue.",
+      "designatedScenarios": [
+        "verifier-case/A19"
+      ],
+      "expectedVerifierOutcome": "incorrect verified_success under mutation",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "independent verifier meta-oracle",
+      "baseArtifactOrSourceDigest": "5b076edab4849ebd7e67f4b8a6580be0e11d4da9e3cd998290faf2475a0c1dc6",
+      "mechanismDigest": "afdddcaf1f5920495d5eb218f2dd2da8ec608c44fde52665533c63d2b8e42217",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "transport/wrong-response-id",
+      "layer": "transport",
+      "classification": "harmful",
+      "mechanism": "deterministic protocol fixture returns a valid response under an unmatched ID",
+      "intendedEffect": "Break request correlation.",
+      "designatedScenarios": [
+        "transport-fixture/mismatched-response-id"
+      ],
+      "expectedVerifierOutcome": "unknown/fail closed",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "transport integrity",
+      "baseArtifactOrSourceDigest": "26efadaf937063f07b7737be70bfd12dbe04bbe15dc6311e128c96390ab62702",
+      "mechanismDigest": "457cd62f496d9364bafa455400c561c164e50361dfcd7bc23893cfe2156f56f6",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "transport/non-protocol-stdout",
+      "layer": "transport",
+      "classification": "harmful",
+      "mechanism": "deterministic protocol fixture writes diagnostic prose to stdout",
+      "intendedEffect": "Contaminate protocol stdout.",
+      "designatedScenarios": [
+        "transport-fixture/stdout-contamination"
+      ],
+      "expectedVerifierOutcome": "unknown/fail closed",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "transport integrity",
+      "baseArtifactOrSourceDigest": "26efadaf937063f07b7737be70bfd12dbe04bbe15dc6311e128c96390ab62702",
+      "mechanismDigest": "4d139e555a7665876e4cf89210c59a9d7e5a459bcd9edfea7569729022637c99",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "transport/malformed-json",
+      "layer": "transport",
+      "classification": "harmful",
+      "mechanism": "deterministic protocol fixture emits malformed JSON",
+      "intendedEffect": "Break JSON framing/parsing.",
+      "designatedScenarios": [
+        "transport-fixture/malformed-json"
+      ],
+      "expectedVerifierOutcome": "unknown/fail closed",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "transport integrity",
+      "baseArtifactOrSourceDigest": "26efadaf937063f07b7737be70bfd12dbe04bbe15dc6311e128c96390ab62702",
+      "mechanismDigest": "164dc65da484bcfd97269801cd7b82be7f89d8364ccaaf1ccc1347d2ef6ad056",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "transport/process-crash-after-mutation",
+      "layer": "transport",
+      "classification": "harmful",
+      "mechanism": "run-local target launcher performs git_add and exits 23 before replying",
+      "intendedEffect": "Mutate the index then crash the target process.",
+      "designatedScenarios": [
+        "git-stage-m1"
+      ],
+      "expectedVerifierOutcome": "unknown with intended state observed",
+      "expectedSuiteResult": "fail no-error/outcome assertion",
+      "expectedLayerSpecificDetection": "transport integrity plus independent state",
+      "baseArtifactOrSourceDigest": "26efadaf937063f07b7737be70bfd12dbe04bbe15dc6311e128c96390ab62702",
+      "mechanismDigest": "877abba40150ed77248e352e11e37dea5d468bc093d179a11d6d6a296dae4f7c",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "transport/timeout-and-late-response",
+      "layer": "transport",
+      "classification": "harmful",
+      "mechanism": "deterministic protocol fixture responds after cancellation tombstoning",
+      "intendedEffect": "Produce timeout followed by a late response.",
+      "designatedScenarios": [
+        "transport-fixture/late-response-after-cancellation"
+      ],
+      "expectedVerifierOutcome": "unknown/fail closed",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "timeout/cancellation transcript integrity",
+      "baseArtifactOrSourceDigest": "26efadaf937063f07b7737be70bfd12dbe04bbe15dc6311e128c96390ab62702",
+      "mechanismDigest": "447206062c86c50f3cc774bf113585fce1ef162bb0cdc50dc4a3fe48b15a94b0",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "transport/cancellation-ignored",
+      "layer": "transport",
+      "classification": "harmful",
+      "mechanism": "deterministic protocol fixture retains the request and ignores notifications/cancelled",
+      "intendedEffect": "Ignore request cancellation until bounded shutdown.",
+      "designatedScenarios": [
+        "transport-fixture/cancellation-ignored"
+      ],
+      "expectedVerifierOutcome": "unknown/fail closed",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "timeout/cancellation and process cleanup",
+      "baseArtifactOrSourceDigest": "26efadaf937063f07b7737be70bfd12dbe04bbe15dc6311e128c96390ab62702",
+      "mechanismDigest": "e255f609542cc415034614d977eefd80153fd17e68d8217ca394fdb92c669dac",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "fixture/reuse-trial-root",
+      "layer": "fixture",
+      "classification": "harmful",
+      "mechanism": "test-only fixture identity ledger repeats a registered trial root",
+      "intendedEffect": "Reuse isolated state across canonical trials.",
+      "designatedScenarios": [
+        "fixture-ledger/root-uniqueness"
+      ],
+      "expectedVerifierOutcome": "not applicable",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "fixture root uniqueness",
+      "baseArtifactOrSourceDigest": "a70438e717458e60bbc7e060934cbfbead480d3ab8f2ebac0c013f13fcab4c6c",
+      "mechanismDigest": "86de67a2113c8633a294adf520fdbbf3bd64113410231738ca7e94063f60bfe9",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "fixture/reuse-server-process",
+      "layer": "fixture",
+      "classification": "harmful",
+      "mechanism": "test-only fixture identity ledger repeats a server process identity",
+      "intendedEffect": "Reuse a server process across canonical trials.",
+      "designatedScenarios": [
+        "fixture-ledger/process-uniqueness"
+      ],
+      "expectedVerifierOutcome": "not applicable",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "process uniqueness",
+      "baseArtifactOrSourceDigest": "a70438e717458e60bbc7e060934cbfbead480d3ab8f2ebac0c013f13fcab4c6c",
+      "mechanismDigest": "b269c9758dd0293d8e857182338a9be9c50d54a9adf60e26911482b6fd9569d9",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "fixture/seed-overlay-omitted",
+      "layer": "fixture",
+      "classification": "harmful",
+      "mechanism": "test-only scenario removes the required unstaged edit before stage execution",
+      "intendedEffect": "Start from an unregistered initial overlay.",
+      "designatedScenarios": [
+        "git-stage-m1"
+      ],
+      "expectedVerifierOutcome": "verified_failure or initial-state mismatch",
+      "expectedSuiteResult": "fail selected-state and outcome assertions",
+      "expectedLayerSpecificDetection": "registered initial state and golden verifier",
+      "baseArtifactOrSourceDigest": "a70438e717458e60bbc7e060934cbfbead480d3ab8f2ebac0c013f13fcab4c6c",
+      "mechanismDigest": "185fd28ab34fae6d701c6c6fdf4b6d03ed280d020e7f980110c7d3ace9cd0ed1",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "fixture/outside-sentinel-changed",
+      "layer": "fixture",
+      "classification": "harmful",
+      "mechanism": "test-only full verifier evidence changes the sibling sentinel",
+      "intendedEffect": "Alter the out-of-scope sentinel.",
+      "designatedScenarios": [
+        "verifier-case/A17"
+      ],
+      "expectedVerifierOutcome": "verified_failure/state_leakage",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "sentinel proof",
+      "baseArtifactOrSourceDigest": "a70438e717458e60bbc7e060934cbfbead480d3ab8f2ebac0c013f13fcab4c6c",
+      "mechanismDigest": "003afff0661465842b1013a7229bff612bfae41908acab6c6250bef981f43e17",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "fixture/cleanup-residue",
+      "layer": "fixture",
+      "classification": "harmful",
+      "mechanism": "test-only full verifier evidence retains fixture residue",
+      "intendedEffect": "Leave registered cleanup residue.",
+      "designatedScenarios": [
+        "verifier-case/A19"
+      ],
+      "expectedVerifierOutcome": "verified_failure/cleanup_failure",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "cleanup proof",
+      "baseArtifactOrSourceDigest": "a70438e717458e60bbc7e060934cbfbead480d3ab8f2ebac0c013f13fcab4c6c",
+      "mechanismDigest": "c782b9259293adc80dc0d2f2300abcce48ff4814ef2deabe9e180f0add8e16e7",
+      "trialCount": 3,
+      "cleanupRequirements": "Retain the intentional residue finding in evidence, then perform bounded emergency removal.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "fixture/stale-index-lock",
+      "layer": "fixture",
+      "classification": "harmful",
+      "mechanism": "test-only fixture snapshot includes .git/index.lock",
+      "intendedEffect": "Start or finish with stale Git lock residue.",
+      "designatedScenarios": [
+        "fixture-snapshot/lockfiles"
+      ],
+      "expectedVerifierOutcome": "verified_failure or fixture refusal",
+      "expectedSuiteResult": "not applicable",
+      "expectedLayerSpecificDetection": "lockfile inspection",
+      "baseArtifactOrSourceDigest": "a70438e717458e60bbc7e060934cbfbead480d3ab8f2ebac0c013f13fcab4c6c",
+      "mechanismDigest": "d00a4941fb1a1a5df1ad0b4a9bf5925fae9e8f5e3f18c5ffef18ee2dc20e101b",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "control/transparent-target-wrapper",
+      "layer": "target",
+      "classification": "benign_control",
+      "mechanism": "run-local Python launcher delegates to the pinned source without behavior changes",
+      "intendedEffect": "Preserve exact target semantics through a transparent wrapper.",
+      "designatedScenarios": [
+        "git-stage-m2"
+      ],
+      "expectedVerifierOutcome": "verified_success",
+      "expectedSuiteResult": "pass where suite applies",
+      "expectedLayerSpecificDetection": "no regression detection",
+      "baseArtifactOrSourceDigest": "52325521ec8ec00297248fa03eaee6802b9cad3ec1e5bebee25971e1b897d56e",
+      "mechanismDigest": "ce1de1fe28c561fa031b54e8483f266ebd3dd5789b7cb152bfa2f6839b4f1e37",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled regression simulation bound to the pinned source; not a claim of an upstream vulnerability."
+    },
+    {
+      "id": "control/presentation-only-result-prose",
+      "layer": "target",
+      "classification": "benign_control",
+      "mechanism": "run-local Python launcher delegates git_add then changes only returned prose",
+      "intendedEffect": "Change presentation text after preserving semantic state.",
+      "designatedScenarios": [
+        "git-stage-m2"
+      ],
+      "expectedVerifierOutcome": "verified_success",
+      "expectedSuiteResult": "pass where suite applies",
+      "expectedLayerSpecificDetection": "no regression detection",
+      "baseArtifactOrSourceDigest": "52325521ec8ec00297248fa03eaee6802b9cad3ec1e5bebee25971e1b897d56e",
+      "mechanismDigest": "f962750db2f472c2ffd06633810a7b2f5169f0bf00c3219db419dc56d6ad9a9c",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled regression simulation bound to the pinned source; not a claim of an upstream vulnerability."
+    },
+    {
+      "id": "control/transport-out-of-order-valid-ids",
+      "layer": "transport",
+      "classification": "benign_control",
+      "mechanism": "deterministic two-request fixture returns the second valid ID before the first",
+      "intendedEffect": "Preserve valid request correlation under out-of-order delivery.",
+      "designatedScenarios": [
+        "transport-fixture/out-of-order-valid-ids"
+      ],
+      "expectedVerifierOutcome": "verified_success",
+      "expectedSuiteResult": "pass where suite applies",
+      "expectedLayerSpecificDetection": "no regression detection",
+      "baseArtifactOrSourceDigest": "26efadaf937063f07b7737be70bfd12dbe04bbe15dc6311e128c96390ab62702",
+      "mechanismDigest": "9db2c78afde6bc23b54a61a306f1a5884896cf0d7fd2c6d380fab6f2644d4287",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "control/transport-split-and-coalesced-frames",
+      "layer": "transport",
+      "classification": "benign_control",
+      "mechanism": "deterministic fixtures split one frame and coalesce multiple valid frames",
+      "intendedEffect": "Preserve framing across chunk boundaries and coalescing.",
+      "designatedScenarios": [
+        "transport-fixture/partial-stdout-chunks",
+        "transport-fixture/multiple-lines-one-chunk"
+      ],
+      "expectedVerifierOutcome": "verified_success",
+      "expectedSuiteResult": "pass where suite applies",
+      "expectedLayerSpecificDetection": "no regression detection",
+      "baseArtifactOrSourceDigest": "26efadaf937063f07b7737be70bfd12dbe04bbe15dc6311e128c96390ab62702",
+      "mechanismDigest": "2fdce145b652c47d18d2f9abf9f8f3af2a1d4a23f262d5d09479c833968a3d28",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    },
+    {
+      "id": "control/transport-notification-interleaving",
+      "layer": "transport",
+      "classification": "benign_control",
+      "mechanism": "deterministic fixture emits a notification before the matching valid response",
+      "intendedEffect": "Preserve semantic behavior with an interleaved notification.",
+      "designatedScenarios": [
+        "transport-fixture/notification-interleaved"
+      ],
+      "expectedVerifierOutcome": "verified_success",
+      "expectedSuiteResult": "pass where suite applies",
+      "expectedLayerSpecificDetection": "no regression detection",
+      "baseArtifactOrSourceDigest": "26efadaf937063f07b7737be70bfd12dbe04bbe15dc6311e128c96390ab62702",
+      "mechanismDigest": "5a7c44650dff0c6bfc4c0dd939fc39c2a63c45f467b12680a1cebde22012e812",
+      "trialCount": 3,
+      "cleanupRequirements": "CP-1 or deterministic local-fixture process cleanup; no canonical retry replacement.",
+      "nonClaim": "Controlled Oculory test mutation; not target vulnerability, conformance, security, or production evidence."
+    }
+  ],
+  "harmfulCountsByLayer": {
+    "target": 7,
+    "adapter": 8,
+    "verifier": 7,
+    "transport": 6,
+    "fixture": 6
+  },
+  "benignControlCount": 5,
+  "registryDigest": "9dd697f65b89f870a6cb4f549294808794131adf24d9a6fece61bc5dc215ff0f"
+}
