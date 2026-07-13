@@ -33,10 +33,15 @@ import {
   changedIndexPaths,
   changedRefNames,
   diffGitSpikeSnapshots,
+  GIT_SPIKE_SNAPSHOT_LAYERS,
   snapshotIndexMatchesCommit,
   snapshotWorktreeMatchesCommit,
   type GitSpikeSnapshotDiff,
 } from '../src/targets/git-spike/snapshot.js';
+import {
+  explainGitSpikeSnapshotDifference,
+  formatGitSpikeSnapshotDiagnostic,
+} from '../src/targets/git-spike/snapshot-diagnostic.js';
 
 const GIT = findExecutable('git');
 const CLEAN_PROCESS: GitSpikeProcessCleanupEvidence = {
@@ -56,7 +61,16 @@ test('Git spike fixture: two materializations have identical semantic state and 
     const secondSnapshot = captureGitSpikeSnapshot(second);
     const secondCleanup = cleanupGitSpikeFixture(second, CLEAN_PROCESS);
 
-    assert.equal(firstSnapshot.stateHash, secondSnapshot.stateHash);
+    const diagnostic = formatGitSpikeSnapshotDiagnostic(explainGitSpikeSnapshotDifference(
+      firstSnapshot,
+      secondSnapshot,
+      { beforeFixture: first, afterFixture: second },
+    ));
+    assert.equal(firstSnapshot.fixtureRecipeDigest, secondSnapshot.fixtureRecipeDigest, diagnostic);
+    for (const layer of GIT_SPIKE_SNAPSHOT_LAYERS) {
+      assert.equal(firstSnapshot.layerHashes[layer], secondSnapshot.layerHashes[layer], diagnostic);
+    }
+    assert.equal(firstSnapshot.stateHash, secondSnapshot.stateHash, diagnostic);
     assert.equal(first.mainHead, second.mainHead);
     assert.equal(first.featureSeedHead, second.featureSeedHead);
     assert.equal(first.siblingHead, second.siblingHead);
@@ -67,6 +81,36 @@ test('Git spike fixture: two materializations have identical semantic state and 
     assert.match(first.mainHead, /^[a-f0-9]{40}$/);
     assert.equal(firstCleanup.passed, true);
     assert.equal(secondCleanup.passed, true);
+  });
+});
+
+test('Git spike snapshot diagnostics are deterministic, bounded, and redact absolute fixture roots', () => {
+  withFixture('diagnostic-output', (value) => {
+    const before = captureGitSpikeSnapshot(value);
+    runFixtureGit(value, ['config', '--local', 'oculory.path-one', value.trialRoot]);
+    runFixtureGit(value, ['config', '--local', 'oculory.path-two', value.repositoryRoot]);
+    runFixtureGit(value, ['config', '--local', 'oculory.path-three', value.siblingRepositoryRoot]);
+    const after = captureGitSpikeSnapshot(value);
+    const first = explainGitSpikeSnapshotDifference(before, after, {
+      beforeFixture: value,
+      afterFixture: value,
+      maxDifferencesPerLayer: 2,
+    });
+    const second = explainGitSpikeSnapshotDifference(before, after, {
+      beforeFixture: value,
+      afterFixture: value,
+      maxDifferencesPerLayer: 2,
+    });
+    const output = formatGitSpikeSnapshotDiagnostic(first);
+
+    assert.equal(output, formatGitSpikeSnapshotDiagnostic(second));
+    assert.deepEqual(first.differingLayers, ['isolation']);
+    assert.ok((first.layers[0]?.differenceCount ?? 0) >= 3);
+    assert.equal(first.layers[0]?.differences.length, 2);
+    assert.equal(first.layers[0]?.truncated, true);
+    assert.equal(output.includes(value.trialRoot), false);
+    assert.equal(output.includes(value.repositoryRoot), false);
+    assert.equal(output.includes(value.siblingRepositoryRoot), false);
   });
 });
 

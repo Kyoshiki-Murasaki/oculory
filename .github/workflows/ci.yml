@@ -43,6 +43,9 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run typecheck
+      - name: Stress Git fixture determinism
+        if: runner.os == 'Windows'
+        run: npm run diagnose:git-fixture
       - run: npm test
       - run: npm run test:gate-f0
       - run: npm run validate:gate-f-authorization

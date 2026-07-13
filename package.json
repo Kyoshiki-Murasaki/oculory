@@ -22,6 +22,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --experimental-sqlite --no-warnings --test \"dist/test/**/*.test.js\" test/launcher-and-version.test.mjs test/package-policy.test.mjs",
+    "diagnose:git-fixture": "npm run build && node dist/test/support/diagnose-git-fixture-determinism.js",
     "test:external-git-spike": "npm run build && node dist/test/support/run-git-mcp-spike.js",
     "test:external-git-formal-gate-b": "npm run build && node dist/test/support/run-git-mcp-formal-gate-b.js",
     "test:external-git-formal-gate-b-attempt": "npm run build && node dist/test/support/run-git-mcp-formal-gate-b.js",

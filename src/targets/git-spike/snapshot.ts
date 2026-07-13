@@ -28,6 +28,19 @@ export type GitSpikeSnapshotLayer =
   | 'lockfiles'
   | 'sibling_boundary';
 
+export const GIT_SPIKE_SNAPSHOT_LAYERS = Object.freeze([
+  'worktree',
+  'status',
+  'index',
+  'head_and_refs',
+  'commit_graph',
+  'reflogs',
+  'objects',
+  'isolation',
+  'lockfiles',
+  'sibling_boundary',
+] as const satisfies readonly GitSpikeSnapshotLayer[]);
+
 export interface GitWorktreeEntry {
   path: string;
   type: 'directory' | 'file' | 'symlink';
@@ -144,6 +157,8 @@ export interface GitSpikeSnapshot {
   stateHash: string;
 }
 
+export type GitSpikeSnapshotData = Omit<GitSpikeSnapshot, 'layerHashes' | 'stateHash'>;
+
 export interface GitSpikeSnapshotDiff {
   beforeStateHash: string;
   afterStateHash: string;
@@ -198,50 +213,7 @@ export function captureGitSpikeSnapshot(fixture: GitSpikeFixture): GitSpikeSnaps
   const siblingBoundary = captureSiblingBoundary(fixture);
   const indexMatchesHead = git(fixture, fixture.repositoryRoot, ['diff', '--cached', '--name-only', '--']).length === 0;
 
-  const semanticReflogs = reflogEvidence.entries.map(stripReflogPresentation);
-  const semanticSentinel = stripSentinelPresentation(siblingBoundary.sentinel);
-  const layers: Record<GitSpikeSnapshotLayer, Json> = {
-    worktree: worktree as unknown as Json,
-    status: {
-      records: statusRecords,
-      clean: statusChanges.length === 0,
-      index_matches_head: indexMatchesHead,
-    },
-    index: index as unknown as Json,
-    head_and_refs: { symbolic_branch: symbolicBranch, head_object_id: headObjectId, refs: refs as unknown as Json },
-    commit_graph: commits as unknown as Json,
-    reflogs: semanticReflogs as unknown as Json,
-    objects: objects as unknown as Json,
-    isolation: {
-      config: config as unknown as Json,
-      remotes,
-      hooks_path: hooksPath,
-      hooks: hooks as unknown as Json,
-      worktrees,
-      submodules,
-      alternates,
-    },
-    lockfiles,
-    sibling_boundary: {
-      symbolic_branch: siblingBoundary.symbolicBranch,
-      head_object_id: siblingBoundary.headObjectId,
-      refs: siblingBoundary.refs as unknown as Json,
-      status_records: siblingBoundary.statusRecords,
-      index: siblingBoundary.index as unknown as Json,
-      objects: siblingBoundary.objects as unknown as Json,
-      worktree: siblingBoundary.worktree as unknown as Json,
-      sentinel: semanticSentinel as unknown as Json,
-    },
-  };
-  const layerHashes = Object.fromEntries(
-    (Object.keys(layers) as GitSpikeSnapshotLayer[]).map((name) => [name, hashJson(layers[name])]),
-  ) as Record<GitSpikeSnapshotLayer, string>;
-  const stateHash = hashJson({
-    fixture_recipe_digest: fixture.seedRecipeDigest,
-    layers: layers as unknown as JsonObject,
-  });
-
-  return {
+  const snapshotData: GitSpikeSnapshotData = {
     fixtureRecipeDigest: fixture.seedRecipeDigest,
     symbolicBranch,
     headObjectId,
@@ -273,8 +245,60 @@ export function captureGitSpikeSnapshot(fixture: GitSpikeFixture): GitSpikeSnaps
       siblingStatusSha256: digest(Buffer.from(siblingBoundary.statusRecords.join('\0'), 'utf8')),
       sentinelMetadataSha256: hashJson(siblingBoundary.sentinel as unknown as JsonObject),
     },
-    layerHashes,
-    stateHash,
+  };
+  const layers = gitSpikeSemanticLayers(snapshotData);
+  const layerHashes = Object.fromEntries(
+    GIT_SPIKE_SNAPSHOT_LAYERS.map((name) => [name, hashJson(layers[name])]),
+  ) as Record<GitSpikeSnapshotLayer, string>;
+  const stateHash = hashJson({
+    fixture_recipe_digest: fixture.seedRecipeDigest,
+    layers: layers as unknown as JsonObject,
+  });
+
+  return { ...snapshotData, layerHashes, stateHash };
+}
+
+export function gitSpikeSemanticLayers(
+  snapshot: GitSpikeSnapshotData,
+): Readonly<Record<GitSpikeSnapshotLayer, Json>> {
+  const semanticReflogs = snapshot.reflogs.map(stripReflogPresentation);
+  const semanticSentinel = stripSentinelPresentation(snapshot.siblingBoundary.sentinel);
+  return {
+    worktree: snapshot.worktree as unknown as Json,
+    status: {
+      records: snapshot.statusRecords,
+      clean: snapshot.clean,
+      index_matches_head: snapshot.indexMatchesHead,
+    },
+    index: snapshot.index as unknown as Json,
+    head_and_refs: {
+      symbolic_branch: snapshot.symbolicBranch,
+      head_object_id: snapshot.headObjectId,
+      refs: snapshot.refs as unknown as Json,
+    },
+    commit_graph: snapshot.commits as unknown as Json,
+    reflogs: semanticReflogs as unknown as Json,
+    objects: snapshot.objects as unknown as Json,
+    isolation: {
+      config: snapshot.config as unknown as Json,
+      remotes: snapshot.remotes,
+      hooks_path: snapshot.hooksPath,
+      hooks: snapshot.hooks as unknown as Json,
+      worktrees: snapshot.worktrees,
+      submodules: snapshot.submodules,
+      alternates: snapshot.alternates,
+    },
+    lockfiles: snapshot.lockfiles,
+    sibling_boundary: {
+      symbolic_branch: snapshot.siblingBoundary.symbolicBranch,
+      head_object_id: snapshot.siblingBoundary.headObjectId,
+      refs: snapshot.siblingBoundary.refs as unknown as Json,
+      status_records: snapshot.siblingBoundary.statusRecords,
+      index: snapshot.siblingBoundary.index as unknown as Json,
+      objects: snapshot.siblingBoundary.objects as unknown as Json,
+      worktree: snapshot.siblingBoundary.worktree as unknown as Json,
+      sentinel: semanticSentinel as unknown as Json,
+    },
   };
 }
 
@@ -284,7 +308,7 @@ export function diffGitSpikeSnapshots(
 ): GitSpikeSnapshotDiff {
   const changedLayers: GitSpikeSnapshotLayer[] = [];
   const layerChanges: GitSpikeSnapshotDiff['layerChanges'] = {};
-  for (const name of Object.keys(before.layerHashes) as GitSpikeSnapshotLayer[]) {
+  for (const name of GIT_SPIKE_SNAPSHOT_LAYERS) {
     if (before.layerHashes[name] === after.layerHashes[name]) continue;
     changedLayers.push(name);
     layerChanges[name] = { before: before.layerHashes[name], after: after.layerHashes[name] };
