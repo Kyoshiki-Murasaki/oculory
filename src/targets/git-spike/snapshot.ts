@@ -590,10 +590,14 @@ function stripSentinelPresentation(metadata: SentinelMetadata): JsonObject {
 }
 
 function tokenizeFixturePaths(value: string, fixture: GitSpikeFixture): string {
-  return value
-    .split(fixture.repositoryRoot).join('<FIXTURE_ROOT>')
-    .split(fixture.siblingRepositoryRoot).join('<SIBLING_ROOT>')
-    .split(fixture.trialRoot).join('<TRIAL_ROOT>');
+  const portableValue = value.split('\\').join('/');
+  const portableRepositoryRoot = fixture.repositoryRoot.split('\\').join('/');
+  const portableSiblingRoot = fixture.siblingRepositoryRoot.split('\\').join('/');
+  const portableTrialRoot = fixture.trialRoot.split('\\').join('/');
+  return portableValue
+    .split(portableRepositoryRoot).join('<FIXTURE_ROOT>')
+    .split(portableSiblingRoot).join('<SIBLING_ROOT>')
+    .split(portableTrialRoot).join('<TRIAL_ROOT>');
 }
 
 function git(fixture: GitSpikeFixture, repositoryRoot: string, args: readonly string[]): Buffer {

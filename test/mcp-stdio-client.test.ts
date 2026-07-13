@@ -673,9 +673,15 @@ test('stdio client: refusal to exit reaches the platform-bounded forced terminat
       const close = await client.close();
       assert.equal(close.graceful, false);
       // Windows terminates the child at SIGTERM; POSIX can observe the fixture
-      // refusing SIGTERM and therefore must continue to bounded SIGKILL.
-      assert.equal(close.escalation, process.platform === 'win32' ? 'sigterm' : 'sigkill');
-      assert.equal(close.processExit?.signal, process.platform === 'win32' ? 'SIGTERM' : 'SIGKILL');
+      // refusing SIGTERM and therefore must continue to bounded SIGKILL. On
+      // Windows, liveness can prove death before Node delivers the exit event.
+      if (process.platform === 'win32') {
+        assert.equal(close.escalation, 'sigterm');
+        if (close.processExit !== null) assert.equal(close.processExit.signal, 'SIGTERM');
+      } else {
+        assert.equal(close.escalation, 'sigkill');
+        assert.equal(close.processExit?.signal, 'SIGKILL');
+      }
       assert.equal(close.liveness.childAlive, false);
       assert.notEqual(close.liveness.managedProcessGroupAlive, true);
     },
