@@ -1,2 +1,23 @@
-#!/usr/bin/env sh
-exec node --experimental-sqlite --no-warnings "$(dirname "$0")/../dist/src/cli/main.js" "$@"
+#!/usr/bin/env node
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const cliPath = fileURLToPath(new URL('../dist/src/cli/main.js', import.meta.url));
+const child = spawn(
+  process.execPath,
+  ['--experimental-sqlite', '--no-warnings', cliPath, ...process.argv.slice(2)],
+  { stdio: 'inherit' },
+);
+
+child.once('error', (error) => {
+  process.stderr.write(`oculory: unable to start the CLI: ${error.message}\n`);
+  process.exitCode = 1;
+});
+
+child.once('exit', (code, signal) => {
+  if (signal) {
+    process.kill(process.pid, signal);
+    return;
+  }
+  process.exitCode = code ?? 1;
+});
