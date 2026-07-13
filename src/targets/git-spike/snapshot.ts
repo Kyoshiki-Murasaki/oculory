@@ -5,6 +5,7 @@ import {
   readFileSync,
   readdirSync,
   readlinkSync,
+  realpathSync,
 } from 'node:fs';
 import { join, relative } from 'node:path';
 import { canonicalJson, hashJson } from '../../schema/canonical.js';
@@ -40,6 +41,15 @@ export const GIT_SPIKE_SNAPSHOT_LAYERS = Object.freeze([
   'lockfiles',
   'sibling_boundary',
 ] as const satisfies readonly GitSpikeSnapshotLayer[]);
+
+export interface GitSpikePathTokenRoots {
+  fixtureRoot: string;
+  siblingRoot: string;
+  trialRoot: string;
+  fixtureRootAliases?: readonly string[];
+  siblingRootAliases?: readonly string[];
+  trialRootAliases?: readonly string[];
+}
 
 export interface GitWorktreeEntry {
   path: string;
@@ -203,7 +213,7 @@ export function captureGitSpikeSnapshot(fixture: GitSpikeFixture): GitSpikeSnaps
     fixture,
   );
   const hooks = walkTree(fixture.emptyHooksDirectory);
-  const worktrees = nonemptyLines(worktreesRaw).map((line) => tokenizeFixturePaths(line, fixture));
+  const worktrees = normalizeWorktreeList(worktreesRaw, fixture);
   const submodules = gitAllowFailure(fixture, fixture.repositoryRoot, ['submodule', 'status', '--recursive']);
   const alternatePath = join(fixture.gitDirectory, 'objects', 'info', 'alternates');
   const alternates = existsSync(alternatePath)
@@ -613,15 +623,95 @@ function stripSentinelPresentation(metadata: SentinelMetadata): JsonObject {
   };
 }
 
+export function tokenizeGitSpikePathPresentation(
+  value: string,
+  roots: GitSpikePathTokenRoots,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  const replacements = [
+    ...[roots.fixtureRoot, ...(roots.fixtureRootAliases ?? [])].map((root) => ({ root, token: '<FIXTURE_ROOT>' })),
+    ...[roots.siblingRoot, ...(roots.siblingRootAliases ?? [])].map((root) => ({ root, token: '<SIBLING_ROOT>' })),
+    ...[roots.trialRoot, ...(roots.trialRootAliases ?? [])].map((root) => ({ root, token: '<TRIAL_ROOT>' })),
+  ].map((entry) => ({ ...entry, root: portablePath(entry.root) }))
+    .filter((entry) => entry.root.length > 0)
+    .sort((a, b) => b.root.length - a.root.length || compareStrings(a.root, b.root));
+  let result = portablePath(value);
+  const seen = new Set<string>();
+  for (const replacement of replacements) {
+    const key = `${platform === 'win32' ? replacement.root.toLowerCase() : replacement.root}\0${replacement.token}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result = replaceRootOccurrences(result, replacement.root, replacement.token, platform === 'win32');
+  }
+  return result;
+}
+
 function tokenizeFixturePaths(value: string, fixture: GitSpikeFixture): string {
-  const portableValue = value.split('\\').join('/');
-  const portableRepositoryRoot = fixture.repositoryRoot.split('\\').join('/');
-  const portableSiblingRoot = fixture.siblingRepositoryRoot.split('\\').join('/');
-  const portableTrialRoot = fixture.trialRoot.split('\\').join('/');
-  return portableValue
-    .split(portableRepositoryRoot).join('<FIXTURE_ROOT>')
-    .split(portableSiblingRoot).join('<SIBLING_ROOT>')
-    .split(portableTrialRoot).join('<TRIAL_ROOT>');
+  return tokenizeGitSpikePathPresentation(value, {
+    fixtureRoot: fixture.repositoryRoot,
+    siblingRoot: fixture.siblingRepositoryRoot,
+    trialRoot: fixture.trialRoot,
+  });
+}
+
+function normalizeWorktreeList(raw: Buffer, fixture: GitSpikeFixture): string[] {
+  return nonemptyLines(raw).map((line) => {
+    if (!line.startsWith('worktree ')) return tokenizeFixturePaths(line, fixture);
+    const reportedPath = line.slice('worktree '.length);
+    const registrations = [
+      { path: fixture.repositoryRoot, token: '<FIXTURE_ROOT>' },
+      { path: fixture.siblingRepositoryRoot, token: '<SIBLING_ROOT>' },
+      { path: fixture.trialRoot, token: '<TRIAL_ROOT>' },
+    ] as const;
+    const registered = registrations.find((entry) => samePhysicalEntry(reportedPath, entry.path));
+    return `worktree ${registered?.token ?? tokenizeFixturePaths(reportedPath, fixture)}`;
+  });
+}
+
+function samePhysicalEntry(a: string, b: string): boolean {
+  try {
+    const left = portablePath(realpathSync.native(a));
+    const right = portablePath(realpathSync.native(b));
+    return process.platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right;
+  } catch {
+    return false;
+  }
+}
+
+function replaceRootOccurrences(value: string, root: string, token: string, caseInsensitive: boolean): string {
+  const searchValue = caseInsensitive ? value.toLowerCase() : value;
+  const searchRoot = caseInsensitive ? root.toLowerCase() : root;
+  let result = '';
+  let cursor = 0;
+  while (cursor < value.length) {
+    const index = searchValue.indexOf(searchRoot, cursor);
+    if (index < 0) break;
+    const end = index + root.length;
+    if (isPathBoundaryBefore(value, index) && isPathBoundaryAfter(value, end)) {
+      result += value.slice(cursor, index) + token;
+      cursor = end;
+    } else {
+      result += value.slice(cursor, index + 1);
+      cursor = index + 1;
+    }
+  }
+  return result + value.slice(cursor);
+}
+
+function isPathBoundaryBefore(value: string, index: number): boolean {
+  return index === 0 || /[\s"'=(:,]/.test(value[index - 1]!);
+}
+
+function isPathBoundaryAfter(value: string, index: number): boolean {
+  return index === value.length || /[\s/"'),]/.test(value[index]!);
+}
+
+function portablePath(value: string): string {
+  return value.split('\\').join('/');
+}
+
+function compareStrings(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 function git(fixture: GitSpikeFixture, repositoryRoot: string, args: readonly string[]): Buffer {

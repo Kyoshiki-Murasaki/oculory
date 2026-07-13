@@ -1,9 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  chmodSync,
   existsSync,
   mkdtempSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -36,6 +38,7 @@ import {
   GIT_SPIKE_SNAPSHOT_LAYERS,
   snapshotIndexMatchesCommit,
   snapshotWorktreeMatchesCommit,
+  tokenizeGitSpikePathPresentation,
   type GitSpikeSnapshotDiff,
 } from '../src/targets/git-spike/snapshot.js';
 import {
@@ -53,11 +56,11 @@ const CLEAN_PROCESS: GitSpikeProcessCleanupEvidence = {
 };
 
 test('Git spike fixture: two materializations have identical semantic state and commit IDs', () => {
-  withBase((base) => {
-    const first = fixture(base, 'determinism-one');
+  withIndependentBases((firstBase, secondBase) => {
+    const first = fixture(firstBase, 'determinism-one');
     const firstSnapshot = captureGitSpikeSnapshot(first);
     const firstCleanup = cleanupGitSpikeFixture(first, CLEAN_PROCESS);
-    const second = fixture(base, 'determinism-two');
+    const second = fixture(secondBase, 'determinism-two');
     const secondSnapshot = captureGitSpikeSnapshot(second);
     const secondCleanup = cleanupGitSpikeFixture(second, CLEAN_PROCESS);
 
@@ -79,9 +82,48 @@ test('Git spike fixture: two materializations have identical semantic state and 
     assert.equal(firstSnapshot.indexMatchesHead, true);
     assert.equal(firstSnapshot.commits.length, 2);
     assert.match(first.mainHead, /^[a-f0-9]{40}$/);
+    assert.notEqual(first.repositoryRoot, second.repositoryRoot);
+    assert.notEqual(first.id, second.id);
     assert.equal(firstCleanup.passed, true);
     assert.equal(secondCleanup.passed, true);
   });
+});
+
+test('Git spike path tokens normalize Windows separators, case, drive spelling, and registered short-path aliases only', () => {
+  const roots = {
+    fixtureRoot: 'C:/Users/runneradmin/AppData/Local/Temp/trial/repository',
+    fixtureRootAliases: ['C:/Users/RUNNER~1/AppData/Local/Temp/trial/repository'],
+    siblingRoot: 'C:/Users/runneradmin/AppData/Local/Temp/trial/sibling',
+    trialRoot: 'C:/Users/runneradmin/AppData/Local/Temp/trial',
+  };
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      'worktree c:\\USERS\\RUNNERADMIN\\AppData\\Local\\Temp\\trial\\repository',
+      roots,
+      'win32',
+    ),
+    'worktree <FIXTURE_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      'worktree C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\trial\\repository',
+      roots,
+      'win32',
+    ),
+    'worktree <FIXTURE_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      'worktree C:\\Users\\runneradmin\\AppData\\Local\\Temp\\trial\\repository-copy',
+      roots,
+      'win32',
+    ),
+    'worktree <TRIAL_ROOT>/repository-copy',
+  );
+  assert.notEqual(
+    tokenizeGitSpikePathPresentation('notes\\plan.txt', roots, 'win32'),
+    tokenizeGitSpikePathPresentation('notes\\renamed.txt', roots, 'win32'),
+  );
 });
 
 test('Git spike snapshot diagnostics are deterministic, bounded, and redact absolute fixture roots', () => {
@@ -177,6 +219,65 @@ test('Git spike snapshot: index and worktree can be checked independently agains
     snapshot = captureGitSpikeSnapshot(value);
     assert.equal(snapshotIndexMatchesCommit(snapshot, value.mainHead), true);
     assert.equal(snapshotWorktreeMatchesCommit(snapshot, value.mainHead), false);
+  });
+});
+
+test('Git spike snapshot: meaningful relative paths, file modes, configuration, and reflog actions remain semantic', () => {
+  withFixture('semantic-fields', (value) => {
+    const clean = captureGitSpikeSnapshot(value);
+
+    renameSync(
+      join(value.repositoryRoot, 'notes', 'plan.txt'),
+      join(value.repositoryRoot, 'notes', 'renamed.txt'),
+    );
+    const renamed = captureGitSpikeSnapshot(value);
+    assert.deepEqual(diffGitSpikeSnapshots(clean, renamed).changedLayers, ['worktree', 'status']);
+    const renamedDiagnostic = explainGitSpikeSnapshotDifference(clean, renamed, {
+      beforeFixture: value,
+      afterFixture: value,
+    });
+    assert.ok(renamedDiagnostic.layers.some((layer) =>
+      layer.differences.some((difference) => difference.pointer.endsWith('/path'))
+    ));
+    renameSync(
+      join(value.repositoryRoot, 'notes', 'renamed.txt'),
+      join(value.repositoryRoot, 'notes', 'plan.txt'),
+    );
+
+    if (process.platform !== 'win32') {
+      chmodSync(join(value.repositoryRoot, 'README.md'), 0o600);
+      const modeChanged = captureGitSpikeSnapshot(value);
+      assert.deepEqual(diffGitSpikeSnapshots(clean, modeChanged).changedLayers, ['worktree']);
+      const modeDiagnostic = explainGitSpikeSnapshotDifference(clean, modeChanged);
+      assert.ok(modeDiagnostic.layers.some((layer) =>
+        layer.differences.some((difference) => difference.indicators.mode)
+      ));
+      chmodSync(join(value.repositoryRoot, 'README.md'), 0o644);
+    }
+
+    runFixtureGit(value, ['config', '--local', 'oculory.semantic-probe', 'enabled']);
+    const configured = captureGitSpikeSnapshot(value);
+    assert.deepEqual(diffGitSpikeSnapshots(clean, configured).changedLayers, ['isolation']);
+    runFixtureGit(value, ['config', '--local', '--unset', 'oculory.semantic-probe']);
+
+    runFixtureGit(value, [
+      'update-ref',
+      '-m',
+      'semantic action: move main',
+      'refs/heads/main',
+      value.firstCommit,
+      value.mainHead,
+    ]);
+    runFixtureGit(value, [
+      'update-ref',
+      '-m',
+      'semantic action: restore main',
+      'refs/heads/main',
+      value.mainHead,
+      value.firstCommit,
+    ]);
+    const reflogChanged = captureGitSpikeSnapshot(value);
+    assert.deepEqual(diffGitSpikeSnapshots(clean, reflogChanged).changedLayers, ['reflogs']);
   });
 });
 
@@ -307,6 +408,17 @@ function withBase(body: (base: string) => void): void {
     body(base);
   } finally {
     rmSync(base, { recursive: true, force: true });
+  }
+}
+
+function withIndependentBases(body: (firstBase: string, secondBase: string) => void): void {
+  const firstBase = mkdtempSync(join(tmpdir(), 'oculory-git-spike-first-'));
+  const secondBase = mkdtempSync(join(tmpdir(), 'oculory-git-spike-second-'));
+  try {
+    body(firstBase, secondBase);
+  } finally {
+    rmSync(firstBase, { recursive: true, force: true });
+    rmSync(secondBase, { recursive: true, force: true });
   }
 }
 
