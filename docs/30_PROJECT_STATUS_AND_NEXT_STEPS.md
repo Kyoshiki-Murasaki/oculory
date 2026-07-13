@@ -1,6 +1,14 @@
 # 30 — Project status and next steps
 
-_Canonical handoff updated through the 2026-07-13 Gate F0 offline validation. Earlier “current status” documents are point-in-time records; use this file for present state._
+_Canonical handoff updated through Phase 7 public engineering readiness on 2026-07-13. Earlier “current status” documents are point-in-time records; use this file for present state._
+
+## Canonical public repository and history boundary
+
+The public repository is `https://github.com/Kyoshiki-Murasaki/oculory` and its default branch is `main`. The public history deliberately starts at one fresh root, `616ca96548e763ab3bb401f4626dcac2857a647b` (`Initial public release of Oculory`). Local `main` and `origin/main` matched that root at the start of Phase 7.
+
+This is a one-root publication discontinuity, not a history migration. Older commit hashes, `master` branch references, milestone tags, and PR chronology retained in docs 31–43 are legacy/private-history evidence identifiers only. They are not reachable current public commits or refs and must not be restored, grafted, merged, or presented as current public history.
+
+Gate F0 implementation and its tracked documentation are already present in the fresh public root. There is no current Gate F0 pull request awaiting review. The active public-readiness work is Phase 7 on `phase7-public-engineering-readiness`, targeting `main`.
 
 ## Executive status
 
@@ -20,11 +28,11 @@ Gate E then recorded the exact human decision to approve eight semantic candidat
 
 Current status is: Gate A passed; formal Gate B passed on attempt 2 while attempt 1 remains failed; Gate C passed; Gate D passed; Gate E1 completed; Gate E passed; **Gate F0 passed**. F1/F2 have not started. Final F0 validation passed 422/422 ordinary offline tests, 18/18 focused F0 tests, build, doctor, authorization validation, and Phase 6 evidence-index validation. Historical live artifacts remain 81 files with manifest digest `be18990c7156a97b03a0037074cdb4f004763c96da05776814b82777d16f1c7e`; all six existing external roots were byte-identical before/after F0.
 
-The final audit in `docs/41_PHASE6_EXTERNAL_GIT_FINAL_AUDIT_AND_FREEZE.md` independently revalidated the pre-freeze repository, six external evidence roots, retained Gate B evidence, historical 81-file manifest, exact human review, suite, registry, and public claims. The deterministic tracked index is `docs/evidence/phase6-external-git-evidence-index-v1.json`. The separately stored local archive and sidecar passed extraction, evidence-manifest, tracked-file, and credential checks and were not added to Git. The scripted milestone is frozen by the final freeze commit and annotated tag `phase6-external-git-scripted-validated`; remote publication remains conditional on unambiguous repository identity, permission, and fast-forward proof. `docs/42_GATE_F_LIVE_MODEL_PROPOSAL.md` is proposal-only and explicitly authorizes no model/provider call.
+The final audit in `docs/41_PHASE6_EXTERNAL_GIT_FINAL_AUDIT_AND_FREEZE.md` independently revalidated the pre-freeze repository, six external evidence roots, retained Gate B evidence, historical 81-file manifest, exact human review, suite, registry, and public claims. The deterministic tracked index is `docs/evidence/phase6-external-git-evidence-index-v1.json`. A separately stored local archive and sidecar passed extraction, evidence-manifest, tracked-file, and credential checks and were not added to Git. The freeze commit and annotated tag named in that report belong to the legacy/private chronology; the Phase 6 tree content was republished in the fresh public root without importing those refs. `docs/42_GATE_F_LIVE_MODEL_PROPOSAL.md` is proposal-only and explicitly authorizes no model/provider call.
 
 Phases 3–5 have three completed local compatibility targets: the task server, sandboxed filesystem server, and issue-tracker server. All three deterministic scripted experiments currently pass their pre-registered `meaningful_technical_success` rule. Preserved filesystem and issue-tracker live artifacts support mining/approval/replay and adversarial claims at controlled local scale. The task target's live workflow is documented historically, but most of its cited isolated run directories are no longer present and therefore were not re-verified during this transition.
 
-Phase 5 is frozen for its stated local scope after the transition commit and `phase5-issue-tracker-live-validated` tag resolve to the audited tree. This is a technical checkpoint, not a production or product-readiness claim.
+Phase 5 was frozen for its stated local scope in the legacy/private chronology. Its old transition commit and `phase5-issue-tracker-live-validated` tag are historical evidence identifiers, not current public refs. This remains a technical checkpoint, not a production or product-readiness claim.
 
 ## Completed targets and evidence level
 
@@ -34,7 +42,7 @@ Phase 5 is frozen for its stated local scope after the transition commit and `ph
 | Filesystem server | Present and re-run: 72 traces, 66 success, 6 rejection; `meaningful_technical_success` | Preserved: 33/33 success, 0 unstable, 10 candidates | Preserved: 8 safe approved; 2 advisory unapproved | Preserved: suite `suite-a7ab85c183`, 15/15 pass | No standalone holdout run preserved; eligible holdout siblings covered by replay | Preserved post-fix: 9 traces, 3 success, 6 rejection, 0 failure/unknown/unstable; 3 advisory candidates unapproved | `docs/27_FILESYSTEM_MODEL_VALIDATION_EVIDENCE.md` and reconciled plan |
 | Issue-tracker server | Present and re-run: 96 traces, 84 success, 12 rejection; `meaningful_technical_success` | Preserved: 39/39 success, 0 unstable, 9 candidates | Preserved: 8 safe approved; `issue_list` advisory unapproved | Preserved: suite `suite-597351ddea`, 20/20 pass | Preserved standalone: 33/33 success, 0 unstable, 0 candidates; eligible siblings also covered by replay | Preserved authoritative post-fix: 18 traces, 6 success, 12 rejection, 0 failure/unknown/unstable; 6 advisory candidates unapproved | `docs/29_ISSUE_TRACKER_MODEL_VALIDATION_EVIDENCE.md` and reconciled plan |
 
-The historical task smoke backup `.oculory-backup-scripted-plus-smoke-20260704-080108` remains locally available. The task mining/replay/holdout/adversarial directories cited in docs/25 do not.
+A historical task smoke backup remains outside tracked Git. The task mining/replay/holdout/adversarial directories cited in docs/25 do not remain locally available.
 
 ## Transition validation baseline
 
@@ -101,6 +109,7 @@ The filesystem and issue-tracker safe-refusal overrides inspect final state and 
 - Model replay validates stability against unchanged targets; it does not yet run the induced-regression comparison under live traffic.
 - Review was single-reviewer and local; no multi-reviewer governance has been tested.
 - Cost figures are internal estimates rather than provider billing records.
+- Phase 7 tests the core CLI/package workflow across Ubuntu, macOS, and Windows; it does not reproduce the macOS-arm64-only external Git MCP evidence on those platforms.
 
 ## Historical transition recommendations
 
@@ -111,9 +120,16 @@ The filesystem and issue-tracker safe-refusal overrides inspect final state and 
 
 Item 1 was subsequently executed through target selection and Gates A–E. Its current outcome is governed by docs/31–41, especially the preserved failed first formal Gate B attempt in docs/36 and the passing repaired attempt in docs/37; this historical ranking is retained rather than rewritten as if the later work had not occurred.
 
-## Current single next action
+Item 2 is implemented by Phase 7 through offline CI, the portable launcher, package verification, contributor documentation, and fresh-history reconciliation. This is bounded public engineering readiness, not production readiness.
 
-Review the Gate F0 pull request and separately decide whether to authorize the six-session Gate F1 paid smoke by naming the exact provider, exact model identifier/snapshot, verified pricing, privacy/retention and region, execution window, scenario list, token/context/call/session caps, retry cap, unknown threshold, endpoint allowlist, and hard dollar cap. Do not begin F1 during Gate F0 review.
+## Exact next development decision
+
+Completion of Phase 7 does not authorize Gate F1. The next decision is one of:
+
+1. Separately design and authorize a minimal Gate F1 live-model smoke with the exact provider, exact model snapshot, current pricing, privacy terms, region, execution window, scenario list, caps, endpoint allowlist, retry policy, unknown threshold, and hard dollar cap; or
+2. Begin a small external-developer usability pilot using only the reproducible offline workflow.
+
+Do not choose or execute Gate F1 automatically.
 
 ## Handoff map
 
@@ -127,5 +143,6 @@ Review the Gate F0 pull request and separately decide whether to authorize the s
 - Final Phase 6 audit/freeze: `docs/41_PHASE6_EXTERNAL_GIT_FINAL_AUDIT_AND_FREEZE.md` and the tracked index under `docs/evidence/`.
 - Unexecuted Gate F proposal: `docs/42_GATE_F_LIVE_MODEL_PROPOSAL.md`.
 - Gate F0 offline implementation and evidence: `docs/43_GATE_F0_OFFLINE_PREPARATION_AND_VALIDATION.md`.
+- Phase 7 CI, CLI, package, and public-history record: `docs/44_PHASE7_PUBLIC_ENGINEERING_READINESS.md`.
 
 Before future implementation work, run the offline baseline above and inspect `git status --short`. Do not create a fourth synthetic target as the next phase.

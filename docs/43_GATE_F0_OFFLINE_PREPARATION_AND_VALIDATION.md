@@ -2,6 +2,8 @@
 
 _Authoritative offline evidence record, 2026-07-13 (Asia/Kolkata). Gate F0 only. This record authorizes no model-provider traffic and does not authorize Gate F1 or F2._
 
+> Fresh-public-history note: the `master` branch, old commits, milestone tag, and pull-request chronology below are legacy/private evidence references only. They are not reachable current public refs. Gate F0 is already present in fresh public root `616ca96548e763ab3bb401f4626dcac2857a647b` on `main`; no current Gate F0 pull request is awaiting review.
+
 ## Decision
 
 **Gate F0: passed.** The authoritative run `git-gate-f0-offline-20260712T210744Z`, from clean implementation commit `8ebf12feb5affedcee1dad041e4b95218f809b30`, passed six deterministic mock sessions through the pinned local Git MCP target, 57/57 preregistered fault cases, seven canonical determinism repeats, complete cleanup and evidence reconstruction, and all ordinary/focused validation. Network call count, real provider calls, real credentials read, retries, and actual provider cost were all zero.
@@ -148,4 +150,4 @@ F0 does not establish model reliability, provider reliability, real-model tool-u
 
 F1 remains unauthorized. Before any future provider execution, a human must separately approve the exact provider, exact model identifier/snapshot, current official pricing and cached/tool-token treatment, privacy/retention and region, execution window, six scenario IDs, source/prompt/scenario/verifier/suite/target/lock bindings, session/turn/call/input/output/context/retry/unknown thresholds, endpoint allowlist, key environment name, tax/currency handling, and positive hard dollar cap. A real provider adapter would still need separate implementation and review.
 
-Single next action: review the Gate F0 pull request and separately decide whether to authorize the six-session Gate F1 paid smoke by naming the exact provider, exact model identifier, verified pricing, privacy terms, execution window, scenario list, token caps, retry cap, unknown threshold, and hard dollar cap.
+Historical next action at the time of this private-history record: review the Gate F0 pull request and separately decide whether to authorize a six-session Gate F1 paid smoke. That PR is no longer current; Gate F0 is already in the fresh public root. The current post-Phase-7 decision boundary is in `docs/30_PROJECT_STATUS_AND_NEXT_STEPS.md` and still requires a separate exact provider/model/pricing/privacy/window/scenario/cap/endpoint/retry/unknown-threshold/dollar-cap authorization before any F1 traffic.
