@@ -1,6 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { canonicalJson, hashJson, sha256 } from '../src/schema/canonical.js';
+import { syncDirectoryEntry } from '../src/schema/durable-write.js';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { is, validate, ValidationError, rawTraceCheck } from '../src/schema/validate.js';
 import { extractEntities } from '../src/pipeline/entities.js';
 import { SCHEMA_VERSION } from '../src/schema/types.js';
@@ -10,6 +14,18 @@ test('canonicalJson sorts keys at every level and is stable', () => {
   const b = canonicalJson({ a: { c: 'x', d: [1, 2] }, b: 1 });
   assert.equal(a, b);
   assert.equal(a, '{"a":{"c":"x","d":[1,2]},"b":1}');
+});
+
+test('directory durability uses fsync where supported and explicitly skips it on Windows', () => {
+  assert.equal(syncDirectoryEntry('not-opened-on-windows', 'win32'), false);
+  if (process.platform === 'win32') return;
+
+  const directory = mkdtempSync(join(tmpdir(), 'oculory-directory-fsync-'));
+  try {
+    assert.equal(syncDirectoryEntry(directory), true);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('canonicalJson normalises -0 and rejects non-finite numbers', () => {

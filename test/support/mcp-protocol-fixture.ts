@@ -530,7 +530,7 @@ function handleToolCall(call: HeldToolCall): void {
       return;
     case 'eof-outstanding':
       stdoutEnded = true;
-      process.stdout.end();
+      process.stdout.end(() => process.exit(0));
       return;
     case 'nonzero-exit':
       setImmediate(() => process.exit(23));

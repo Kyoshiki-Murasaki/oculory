@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import {
-  chmodSync,
   existsSync,
   mkdtempSync,
   mkdirSync,
@@ -150,11 +149,10 @@ test('Gate B evidence aggregation rejects missing, duplicate, corrupted, and par
 test('Gate B evidence native-Git timeout fixture deterministically raises the configured timeout', () => {
   const root = mkdtempSync(join(tmpdir(), 'oculory-git-timeout-fixture-'));
   try {
-    const executable = join(root, 'fake-git');
-    writeFileSync(executable, '#!/bin/sh\nsleep 1\n', { encoding: 'utf8', mode: 0o700 });
-    chmodSync(executable, 0o700);
+    const fixture = join(root, 'fake-git.mjs');
+    writeFileSync(fixture, 'setTimeout(() => undefined, 1_000);\n', 'utf8');
     assert.throws(
-      () => runGitRaw(executable, root, { PATH: '/usr/bin:/bin', LC_ALL: 'C' }, ['remote'], 10),
+      () => runGitRaw(process.execPath, root, { PATH: process.env.PATH ?? '', LC_ALL: 'C' }, [fixture, 'remote'], 10),
       (error: unknown) => error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ETIMEDOUT',
     );
   } finally {

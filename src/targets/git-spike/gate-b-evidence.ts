@@ -13,6 +13,7 @@ import {
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { canonicalJson } from '../../schema/canonical.js';
+import { syncDirectoryEntry } from '../../schema/durable-write.js';
 import type { Json, JsonObject } from '../../schema/types.js';
 
 export const GATE_B_EVIDENCE_SCHEMA = 'oculory-git-gate-b-evidence-v2';
@@ -456,8 +457,7 @@ export class GateBEvidenceStore {
       closeSync(descriptor);
       descriptor = null;
       renameSync(temporary, path);
-      const directoryDescriptor = openSync(dirname(path), 'r');
-      try { fsyncSync(directoryDescriptor); } finally { closeSync(directoryDescriptor); }
+      syncDirectoryEntry(dirname(path));
     } catch (error) {
       if (descriptor !== null) closeSync(descriptor);
       throw error;

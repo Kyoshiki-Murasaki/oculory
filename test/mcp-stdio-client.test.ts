@@ -665,15 +665,17 @@ test('stdio client: stdin-close graceful shutdown succeeds for a cooperative fix
   });
 });
 
-test('stdio client: refusal to exit escalates through SIGTERM to bounded SIGKILL', async () => {
+test('stdio client: refusal to exit reaches the platform-bounded forced termination', async () => {
   await withFixture(
     'refuse-exit',
     async (client) => {
       await client.initialize();
       const close = await client.close();
       assert.equal(close.graceful, false);
-      assert.equal(close.escalation, 'sigkill');
-      assert.equal(close.processExit?.signal, 'SIGKILL');
+      // Windows terminates the child at SIGTERM; POSIX can observe the fixture
+      // refusing SIGTERM and therefore must continue to bounded SIGKILL.
+      assert.equal(close.escalation, process.platform === 'win32' ? 'sigterm' : 'sigkill');
+      assert.equal(close.processExit?.signal, process.platform === 'win32' ? 'SIGTERM' : 'SIGKILL');
       assert.equal(close.liveness.childAlive, false);
       assert.notEqual(close.liveness.managedProcessGroupAlive, true);
     },

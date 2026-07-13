@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { canonicalJson } from '../schema/canonical.js';
+import { syncDirectoryEntry } from '../schema/durable-write.js';
 import type { Json } from '../schema/types.js';
 import { ModelExecutionError } from './errors.js';
 
@@ -110,8 +111,7 @@ function atomicExclusive(path: string, bytes: Buffer): void {
   const fd = openSync(temp, 'wx', 0o600);
   try { writeFileSync(fd, bytes); fsyncSync(fd); } finally { closeSync(fd); }
   renameSync(temp, path);
-  const dir = openSync(dirname(path), 'r');
-  try { fsyncSync(dir); } finally { closeSync(dir); }
+  syncDirectoryEntry(dirname(path));
 }
 
 function walk(root: string): string[] {

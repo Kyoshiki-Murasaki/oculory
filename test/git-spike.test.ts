@@ -308,10 +308,15 @@ function fakeDiff(changedLayers: GitSpikeSnapshotDiff['changedLayers']): GitSpik
 }
 
 function findExecutable(name: string): string {
+  const extensions = process.platform === 'win32'
+    ? ['', ...(process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';')]
+    : [''];
   for (const directory of (process.env.PATH ?? '').split(delimiter)) {
     if (directory.length === 0) continue;
-    const candidate = join(directory, name);
-    if (existsSync(candidate)) return resolve(candidate);
+    for (const extension of extensions) {
+      const candidate = join(directory, `${name}${extension}`);
+      if (existsSync(candidate)) return resolve(candidate);
+    }
   }
   throw new Error(`${name} was not found on PATH`);
 }
