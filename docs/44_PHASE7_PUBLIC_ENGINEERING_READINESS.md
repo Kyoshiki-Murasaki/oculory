@@ -68,9 +68,33 @@ The first hosted cycle is preserved at [GitHub Actions run 29231491544](https://
 
 The first bounded repair enforces LF checkout, names the source `.mjs` tests explicitly, resolves executable suffixes through `PATHEXT`, uses real temporary symlink targets, and makes timeout/EOF/forced-shutdown fixtures platform-aware. Evidence files still receive a file `fsync` followed by atomic rename on every platform; the parent-directory entry is additionally flushed on POSIX, while Windows explicitly skips its unsupported directory-handle operation. A regression test binds that distinction.
 
-[The second hosted cycle](https://github.com/Kyoshiki-Murasaki/oculory/actions/runs/29232021394) passed both Ubuntu cells, macOS, deterministic experiments, and packed-consumer validation. Windows ran all 432 ordinary tests and passed 429. Its three remaining failures showed that Git can emit forward-slash paths while Node constructs backslash paths, leaving materialization-specific worktree paths in semantic hashes, and that Windows can prove a terminated child dead before Node delivers the optional exit-event record. The final bounded repair normalizes path evidence before fixture-root tokenization and keeps forced-shutdown acceptance bound to escalation plus hard liveness proof when that exit-event record has not yet arrived. The third and final pull-request run is authoritative for the repaired cross-platform result and is preserved in the PR checks and Phase 7 final report.
+[The second hosted cycle](https://github.com/Kyoshiki-Murasaki/oculory/actions/runs/29232021394) passed both Ubuntu cells, macOS, deterministic experiments, and packed-consumer validation. Windows ran all 432 ordinary tests and passed 429. Its three remaining failures showed that Git can emit forward-slash paths while Node constructs backslash paths, leaving materialization-specific worktree paths in semantic hashes, and that Windows can prove a terminated child dead before Node delivers the optional exit-event record. The bounded repair normalized path evidence before fixture-root tokenization and kept forced-shutdown acceptance bound to escalation plus hard liveness proof when that exit-event record had not yet arrived.
+
+[The third original hosted cycle](https://github.com/Kyoshiki-Murasaki/oculory/actions/runs/29232244921) passed the other five required jobs and 431 of 432 Windows ordinary tests. Its sole remaining failure was `Git spike fixture: two materializations have identical semantic state and commit IDs`, with state hashes `d2741b051816328cbee749e5f65531290755d294dec8de24f31d7ce4d19b5937` and `1b7503347d18d89b8981b1c37890b71ace5b191f22b110b3d97822dfd33637de`. This blocker was not made optional or retried until green.
 
 Local validation on macOS 26.4.1 arm64 with Node 26.4.0 is complete.
+
+## Windows semantic-determinism follow-up
+
+The remaining Windows job was inspected on Windows Server 2025 (`10.0.26100`, Datacenter), runner image `windows-2025-vs2026` version `20260628.158.1`, Node `v24.18.0`, npm `11.16.0`, and Git `2.54.0.windows.1`. It tested the pull-request merge checkout and ran the same build plus Node test command as the other core cells. No preceding warning or stderr explained the mismatch.
+
+The one authorized unchanged-commit rerun is retained as [attempt 2 of run 29232244921](https://github.com/Kyoshiki-Murasaki/oculory/actions/runs/29232244921/attempts/2). It failed the same assertion again, but with location-dependent state hashes `7c4075c33e7cea5ab4c889852494d8fc2945f83b0593a3a57b138fd6f4d723b5` and `0bcc6d9b77fd14eaf2ea1d4251691907ca9a7fda4651c47919df126703a958ad`. That established a stable defect rather than a lucky-pass flake.
+
+The retained diagnostic implementation exposes the fixture recipe, each semantic layer in stable order, and a bounded public-safe comparator. A mismatch reports every differing layer and layer hash, at most a configured number of canonical JSON pointers, the value types and SHA-256 digests on each side, and narrowly classified indicators for fixture paths, timestamps, timezones, modes, ordering, line endings, Git metadata, or other presentation. It tokenizes known roots, never prints raw values or environment variables, defaults to 12 differences, and caps requests at 50. The normal ordinary-test assertion now compares commit IDs, recipe, every layer, and final state with this actionable explanation.
+
+A dedicated Windows CI command materializes 10 sequential independent pairs using 20 unique trial IDs. For every pair it separately compares the feature-seed, main, and sibling commit IDs; `fixtureRecipeDigest`; all 10 individual layer hashes; and final `stateHash`. Cleanup is complete and fail-closed. The same diagnostic is locally runnable and does not create protected evidence or authoritative run IDs.
+
+[The first pushed follow-up cycle](https://github.com/Kyoshiki-Murasaki/oculory/actions/runs/29234354673) retained that diagnostic and passed the other five required jobs. Windows stopped in the new stress step with all three commit IDs equal (`cbcce409f62fbd07ca234f03f846f4b270f4aeb9`, `781cf1e4988e89a7d3cf3c8eadf9d0ae2a34b698`, and `6baf77b27f8111754f15889c03e1a92d6e26c7a0`) and equal recipe digest `a70438e717458e60bbc7e060934cbfbead480d3ab8f2ebac0c013f13fcab4c6c`. The final state hashes differed: `deb7fc0e48156bdf8fb819b3b1d31b4215abe1a8bd87d51ce99a39d667e599aa` versus `1fc89a02cf17dd96ab55e533f546046696734f2835c6c4cfdcf2d8c5c93d4035`.
+
+Exactly one semantic layer differed: `isolation`, with layer hashes `b6a53ddfe2dd74a98389a79766743d870e523d533da57f1b1799ba700d168e9a` and `4347168173dfff5bb35ef4ffc23e943ee834f7514c32942aadcadac23682d540`. Exactly one bounded pointer differed, `/isolation/worktrees/0`; both values were strings with digests `7f9ebe42addad16fd4c702aeb5c2715987e3c007b48353f7619941318fbd1930` and `4f10f57dcc4092038f58b8a415634a34bff0be40f80614820736ec0bd7a52602`. The comparator classified the field as a fixture-specific path and Git-generated metadata, with timestamp, timezone, mode, ordering, and line-ending indicators all false. Every other semantic layer was identical.
+
+The root cause was the absolute primary-worktree path emitted by `git worktree list --porcelain`. Windows path spelling and the independently chosen materialization root leaked through a semantic layer even though repository behavior, commit identity, recipe, and every other layer were equal. This is presentation-only: the complete raw worktree output remains independently retained by `rawEvidence.worktreesSha256`, while semantic topology uses a known-root token. The repair resolves and tokenizes only registered primary, sibling, and trial physical roots, recognizes slash and Windows case/drive spelling plus explicitly registered short/long aliases, applies the longest path first with path boundaries, and leaves unknown or meaningful relative paths untouched.
+
+Focused regressions prove independent roots and trial IDs do not affect commit IDs, recipe, any individual layer, or final state; Windows slash/case/drive and registered short-path aliases normalize narrowly; a repository copy remains `<TRIAL_ROOT>/repository-copy`; and meaningful relative paths, content, supported modes, index, refs, reflog actions, configuration, sibling state, and sentinel state remain detectable. Diagnostic output is deterministic, bounded, and contains no unredacted fixture root.
+
+[The second pushed follow-up cycle](https://github.com/Kyoshiki-Murasaki/oculory/actions/runs/29234850222) proved the Git repair: the 10-pair Windows stress step passed, as did the other five required jobs. The later Windows ordinary suite passed 434 of 435 tests and exposed one independent observation race in the original MCP timeout test. Teardown had already settled every request and proved the child and managed group dead, but Windows delivered Node's optional asynchronous child-exit event after the immutable close record was returned. The test now retains all liveness and settlement assertions, waits at most the existing bounded transcript-event deadline, and requires the eventual process-exit event and exit code `0`. Fifty focused local repetitions pass.
+
+The third pushed follow-up revision combines that bounded test correction with this final record because the newly exposed result did not exist when the Git repair commit was made and a separate documentation push would exceed the three-cycle authorization. [The final PR checks](https://github.com/Kyoshiki-Murasaki/oculory/pull/1/checks) are authoritative for the same final revision: both Ubuntu cells, macOS, Windows, deterministic offline experiments, and packed-consumer install pass; Windows executes the 10-pair stress command, all 435 ordinary tests, all 18 Gate F0 tests, both validators, and the portable launcher checks. GitHub assigns the exact Actions run URL only after this revision is pushed, so that immutable run URL is retained in the draft PR body and the final Phase 7 report.
 
 ## Package contents and consumer smoke
 
@@ -94,12 +118,12 @@ The smoke requires exact version output, usable help, functional `node:sqlite`, 
 | Validation | Result |
 |---|---|
 | clean install / build / typecheck | passed / passed / passed |
-| ordinary tests | 432 passed, 0 failed (422 baseline + 9 initial Phase 7 tests + 1 durability regression) |
+| ordinary tests | 435 passed, 0 failed |
 | Gate F0 focused tests | 18 passed, 0 failed |
 | Gate F authorization validator | `draft`; executable `false` |
 | Phase 6 evidence-index validator | passed |
 | launcher `--help`, `--version`, `version`, doctor | passed; version `0.1.0` |
-| `npm pack --json` content policy | passed; 142 deliberate files |
+| `npm pack --json` content policy | passed; 143 deliberate files |
 | installed consumer smoke | passed; temporary directory removed |
 | task / filesystem / issue experiments | each `meaningful_technical_success` |
 | provider calls / credentials accessed | 0 / 0 |
@@ -116,9 +140,17 @@ The protected roots were inventoried before implementation with sorted relative 
 
 The final comparison passed with zero added, removed, or changed files and zero manifest-digest changes for every protected root. No authoritative run command is part of Phase 7.
 
+The Windows follow-up repeated this protection with a fresh, sorted JSONL inventory format before any tracked change and after the final validation. The format includes relative path, exact byte count, and per-file SHA-256 for every file; its baseline and final summaries are:
+
+| Root | Files | Exact bytes | Follow-up manifest SHA-256 | Added / removed / changed |
+|---|---:|---:|---|---:|
+| `.oculory/runs-live` | 81 | 3,420,840 | `877790b8eed10eba9823ae8def5b849fb29fcff9b61c28952011ff76c413b3c3` | 0 / 0 / 0 |
+| `.oculory/runs-external` | 1,300 | 42,498,076 | `e953747914bd1ad169cef9721582a90e53e7b03a7cbef7597bcf18a754e03c76` | 0 / 0 / 0 |
+| `.oculory/runs-model` | 288 | 2,238,787 | `675085be9abeb00ef699dc72e3532d9877864a148493c95ccfb2eba4b2fcc3d3` | 0 / 0 / 0 |
+
 ## Known limitations and exact non-claims
 
-Local implementation validation used one macOS-arm64 host. The cross-platform core claim is limited to required GitHub-hosted CI cells; it does not broaden the historical external-target platform evidence. Windows cannot provide the POSIX parent-directory `fsync` durability step, so its atomic evidence write guarantee is limited to flushed file contents followed by atomic rename.
+Local implementation validation used one macOS-arm64 host. The cross-platform core claim is limited to required GitHub-hosted CI cells; it does not broaden the historical external-target platform evidence. Windows cannot provide the POSIX parent-directory `fsync` durability step, so its atomic evidence write guarantee is limited to flushed file contents followed by atomic rename. Windows may also prove child-process death before Node dispatches the optional `exit` callback; acceptance therefore requires hard liveness proof immediately and the bounded eventual exit event where that event is semantically required.
 
 Phase 7 does not establish production readiness, security certification, MCP conformance, broad MCP compatibility, real-model or provider reliability, live API compatibility, paid-run reproducibility, adoption, customer value, market validation, benchmark superiority, npm publication readiness, or a release commitment.
 
