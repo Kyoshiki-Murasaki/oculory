@@ -668,8 +668,17 @@ test('stdio client: stdin-close graceful shutdown succeeds for a cooperative fix
     const close = await client.close();
     assert.equal(close.graceful, true);
     assert.equal(close.escalation, 'none');
-    assert.equal(close.processExit?.code, 0);
-    assert.equal(close.processExit?.signal, null);
+    assert.equal(close.liveness.childAlive, false);
+    assert.notEqual(close.liveness.managedProcessGroupAlive, true);
+    const processExit = await waitForTranscriptEvent(
+      client,
+      (event) => event.kind === 'process_exit',
+      'graceful stdin-close process exit',
+    );
+    assert.equal(processExit.exitCode, 0);
+    assert.equal(processExit.signal, null);
+    assert.equal(client.diagnostics().processExit?.code, 0);
+    assert.equal(client.diagnostics().processExit?.signal, null);
   });
 });
 
