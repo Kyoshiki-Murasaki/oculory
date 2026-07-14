@@ -1,6 +1,6 @@
 # 44 — Phase 7 public engineering readiness
 
-_Implementation record for `phase7-public-engineering-readiness`, 2026-07-13. This is a bounded public engineering-readiness milestone, not a production-readiness declaration and not authorization for model-provider traffic._
+_Implementation record for `phase7-public-engineering-readiness`, 2026-07-13 through 2026-07-14. This is a bounded public engineering-readiness milestone, not a production-readiness declaration and not authorization for model-provider traffic._
 
 ## Scope
 
@@ -88,13 +88,35 @@ A dedicated Windows CI command materializes 10 sequential independent pairs usin
 
 Exactly one semantic layer differed: `isolation`, with layer hashes `b6a53ddfe2dd74a98389a79766743d870e523d533da57f1b1799ba700d168e9a` and `4347168173dfff5bb35ef4ffc23e943ee834f7514c32942aadcadac23682d540`. Exactly one bounded pointer differed, `/isolation/worktrees/0`; both values were strings with digests `7f9ebe42addad16fd4c702aeb5c2715987e3c007b48353f7619941318fbd1930` and `4f10f57dcc4092038f58b8a415634a34bff0be40f80614820736ec0bd7a52602`. The comparator classified the field as a fixture-specific path and Git-generated metadata, with timestamp, timezone, mode, ordering, and line-ending indicators all false. Every other semantic layer was identical.
 
-The root cause was the absolute primary-worktree path emitted by `git worktree list --porcelain`. Windows path spelling and the independently chosen materialization root leaked through a semantic layer even though repository behavior, commit identity, recipe, and every other layer were equal. This is presentation-only: the complete raw worktree output remains independently retained by `rawEvidence.worktreesSha256`, while semantic topology uses a known-root token. The repair resolves and tokenizes only registered primary, sibling, and trial physical roots, recognizes slash and Windows case/drive spelling plus explicitly registered short/long aliases, applies the longest path first with path boundaries, and leaves unknown or meaningful relative paths untouched.
+The root cause was the absolute primary-worktree path emitted by `git worktree list --porcelain`. Windows path spelling and the independently chosen materialization root leaked through a semantic layer even though repository behavior, commit identity, recipe, and every other layer were equal. This is presentation-only: the complete raw worktree output remains independently retained by `rawEvidence.worktreesSha256`, while semantic topology uses a known-root token. The repair resolves and tokenizes registered primary, sibling, and trial physical roots, recognizes slash and Windows case/drive spelling plus explicitly registered short/long aliases, and applies the longest path first with path boundaries. Its contemporary claim that unknown values were left untouched described the intended scope, not the implementation ultimately audited; the final-audit finding below corrects that claim.
 
-Focused regressions prove independent roots and trial IDs do not affect commit IDs, recipe, any individual layer, or final state; Windows slash/case/drive and registered short-path aliases normalize narrowly; a repository copy remains `<TRIAL_ROOT>/repository-copy`; and meaningful relative paths, content, supported modes, index, refs, reflog actions, configuration, sibling state, and sentinel state remain detectable. Diagnostic output is deterministic, bounded, and contains no unredacted fixture root.
+The original focused regressions proved independent roots and trial IDs do not affect commit IDs, recipe, any individual layer, or final state; Windows slash/case/drive and registered short-path aliases normalize; a repository copy remains under `<TRIAL_ROOT>`; and meaningful relative paths, content, supported modes, index, refs, reflog actions, configuration, sibling state, and sentinel state remain detectable. They did not prove byte-for-byte preservation of unmatched slash and backslash values. Diagnostic output remained deterministic, bounded, and free of unredacted fixture roots.
 
 [The second pushed follow-up cycle](https://github.com/Kyoshiki-Murasaki/oculory/actions/runs/29234850222) proved the Git repair: the 10-pair Windows stress step passed, as did the other five required jobs. The later Windows ordinary suite passed 434 of 435 tests and exposed one independent observation race in the original MCP timeout test. Teardown had already settled every request and proved the child and managed group dead, but Windows delivered Node's optional asynchronous child-exit event after the immutable close record was returned. The test now retains all liveness and settlement assertions, waits at most the existing bounded transcript-event deadline, and requires the eventual process-exit event and exit code `0`. Fifty focused local repetitions pass.
 
 The third pushed follow-up revision combines that bounded test correction with this final record because the newly exposed result did not exist when the Git repair commit was made and a separate documentation push would exceed the three-cycle authorization. [The final PR checks](https://github.com/Kyoshiki-Murasaki/oculory/pull/1/checks) are authoritative for the same final revision: both Ubuntu cells, macOS, Windows, deterministic offline experiments, and packed-consumer install pass; Windows executes the 10-pair stress command, all 435 ordinary tests, all 18 Gate F0 tests, both validators, and the portable launcher checks. GitHub assigns the exact Actions run URL only after this revision is pushed, so that immutable run URL is retained in the draft PR body and the final Phase 7 report.
+
+## Final-audit semantic-preservation repair
+
+The later independent final audit correctly left PR 1 draft and unmerged after finding a broader semantic-normalization defect. `tokenizeGitSpikePathPresentation` began its returned value from `portablePath(value)`, so every backslash became a slash even when no fixture, sibling, trial, or explicitly registered alias root matched. The direct reproduction was:
+
+```text
+alpha\beta             -> alpha/beta
+alpha/beta              -> alpha/beta
+D:\unknown\repository  -> D:/unknown/repository
+```
+
+For two fixture snapshots differing only between `alpha\beta` and `alpha/beta`, raw config evidence remained distinct (`0b05e5769999d3ab5937ae299fcc35393f298ca32256597b3e952f7431e62bf6` versus `73dae9ad1c50546f413909905df0a5da9d2d092263ac40f731de065509b766c9`), but both isolation hashes collapsed to `e9e4cbc94c2613e940019ca64962f3d59e38b1699067ebc9848fa3b1dd2fb833`, both state hashes collapsed to `dce218205cbb8a294aec6fb3aa4d6a46e068d156320674b57c8a36c6e63a5b15`, and `changedLayers` was empty.
+
+The narrow repair separates comparison from construction. It scans the original string, compares only candidate spans against registered roots, allows case-insensitive and separator-equivalent comparison only for Windows registered-root spans, retains longest-root and original path-boundary behavior, emits the token for an exact match, and otherwise copies the next original character unchanged. Registered-root deduplication may use a comparison-only portable spelling; that spelling never becomes semantic output. Unknown paths, non-path strings, prefixes, suffixes, case, and separators are not globally rewritten. Physical-entry resolution and public-safe diagnostic classification remain separate from semantic canonicalization.
+
+Five focused tests now prove native, forward, and mixed Windows spelling; case and drive equivalence; explicit fixture, sibling, and trial aliases; longest-root selection; before/after boundaries; exact prefix and suffix preservation; unchanged unknown Windows, mixed-separator, short-path-looking, forward-slash, and non-path values; and POSIX case/separator behavior. A fixture-level regression proves that `alpha\beta` versus `alpha/beta`, and `D:\unknown\repository` versus `D:/unknown/repository`, retain distinct raw config digests, isolation hashes, state hashes, and an `isolation` entry in `changedLayers`.
+
+After repair, the same semantic probe returns each of the three inputs above unchanged. The `alpha\beta` and `alpha/beta` snapshot pair has distinct raw config digests (`3e1597def28f85a57874f8129a9c5e0f8c4ee46ea63d17d2bb713233704e6c17` versus `761e59b27ae646ab1ae9723b51b848bb8e10f90d4125fa3b17536798cc7c1971`), isolation hashes (`b2e9ada6c47b2b79538132770e346c3253938c198b6524b2b6a342e89e16ede1` versus `e9e4cbc94c2613e940019ca64962f3d59e38b1699067ebc9848fa3b1dd2fb833`), state hashes (`39b9ff2e8b6d265e1f45ffda36a98ebc8ff502d12c0a9ba4b9351d0b7d9d97e2` versus `dce218205cbb8a294aec6fb3aa4d6a46e068d156320674b57c8a36c6e63a5b15`), and `changedLayers: ["isolation"]`.
+
+[Fresh repair CI cycle 1](https://github.com/Kyoshiki-Murasaki/oculory/actions/runs/29320709614) passed both Ubuntu cells, macOS, deterministic offline experiments, packed-consumer install, and the required Windows 10-pair stress step. Windows ordinary tests passed 438 of 439; the sole failure was an obsolete expectation that `core.hooksPath` would globally rewrite its unmatched native `\runtime\hooks` suffix to `/runtime/hooks`. The test now expects the platform-native suffix, directly binding the repaired invariant rather than weakening it. The [fresh follow-up PR checks](https://github.com/Kyoshiki-Murasaki/oculory/pull/1/checks) are authoritative for this corrected revision and must show all six jobs passing; the immutable run URL and exact head are retained in the draft PR body and repair report after GitHub assigns them. This repair is not a successful final independent audit: that audit must be repeated separately against the exact new head.
+
+Fresh local repair validation passed a clean install with zero audit findings, build, typecheck, all 439 ordinary tests, five focused semantic-preservation tests, the 10/10-pair fixture diagnostic, all 18 Gate F0 tests, both validators, package policy and installed-consumer smoke, all three deterministic experiments, launcher commands, `git diff --check`, and `git fsck --full`. The package remains version `0.1.0` with 143 deliberate files; exact final archive bytes and digest are recorded outside this self-included document in the draft PR body and repair report. Authorization remains `draft` with `executable=false`. Provider calls, provider-network traffic, and credentials requested or read were all zero.
 
 ## Package contents and consumer smoke
 
@@ -118,7 +140,9 @@ The smoke requires exact version output, usable help, functional `node:sqlite`, 
 | Validation | Result |
 |---|---|
 | clean install / build / typecheck | passed / passed / passed |
-| ordinary tests | 435 passed, 0 failed |
+| ordinary tests | 439 passed, 0 failed |
+| focused semantic-preservation regressions | 5 passed, 0 failed |
+| Git fixture diagnostic | 10/10 pairs; 20 unique trial IDs; 15 comparisons per pair |
 | Gate F0 focused tests | 18 passed, 0 failed |
 | Gate F authorization validator | `draft`; executable `false` |
 | Phase 6 evidence-index validator | passed |
@@ -148,6 +172,14 @@ The Windows follow-up repeated this protection with a fresh, sorted JSONL invent
 | `.oculory/runs-external` | 1,300 | 42,498,076 | `e953747914bd1ad169cef9721582a90e53e7b03a7cbef7597bcf18a754e03c76` | 0 / 0 / 0 |
 | `.oculory/runs-model` | 288 | 2,238,787 | `675085be9abeb00ef699dc72e3532d9877864a148493c95ccfb2eba4b2fcc3d3` | 0 / 0 / 0 |
 
+The final-audit repair repeated the inventory again using deterministic UTF-8 JSON. Files are sorted by slash-normalized relative path; each aggregate is SHA-256 over concatenated `JSON([path, bytes, sha256, kind])` plus LF rows. Baseline and final inventories are identical:
+
+| Root | Files | Exact bytes | Repair manifest SHA-256 | Added / removed / changed |
+|---|---:|---:|---|---:|
+| `.oculory/runs-live` | 81 | 3,420,840 | `9cdb26c4374d431909f1fc69a270c8bcfa906d0376c6c513fd1947e2f5863805` | 0 / 0 / 0 |
+| `.oculory/runs-external` | 1,300 | 42,498,076 | `d0fc5cbcd505766bf4c6cdb362fab27e55583c63c1a29691acfec0c4c0d5d640` | 0 / 0 / 0 |
+| `.oculory/runs-model` | 288 | 2,238,787 | `e09853ad2f9c486a83780d0856d05250673605c51104526f861af0c69dc11f09` | 0 / 0 / 0 |
+
 ## Known limitations and exact non-claims
 
 Local implementation validation used one macOS-arm64 host. The cross-platform core claim is limited to required GitHub-hosted CI cells; it does not broaden the historical external-target platform evidence. Windows cannot provide the POSIX parent-directory `fsync` durability step, so its atomic evidence write guarantee is limited to flushed file contents followed by atomic rename. Windows may also prove child-process death before Node dispatches the optional `exit` callback; acceptance therefore requires hard liveness proof immediately and the bounded eventual exit event where that event is semantically required.
@@ -158,9 +190,4 @@ The CI/package workflow has zero runtime provider traffic and does not access cr
 
 ## Exact next decision boundary
 
-Completion of Phase 7 does not authorize Gate F1. The next decision is one of:
-
-1. Separately design and authorize a minimal Gate F1 live-model smoke with exact provider, exact model snapshot, current pricing, privacy terms, region, execution window, scenario list, caps, endpoint allowlist, retry policy, unknown threshold, and hard dollar cap; or
-2. Begin a small external-developer usability pilot using only the reproducible offline workflow.
-
-Do not choose or execute Gate F1 automatically.
+The exact next action is a separate repeat of the independent final audit against the new repair head recorded in PR 1. Only that later task may make an audit-and-merge decision. This repair does not authorize merging, marking the PR ready, Gate F1 or F2, an external developer pilot, npm publication, a release, or a tag.

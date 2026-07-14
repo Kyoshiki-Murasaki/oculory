@@ -320,7 +320,7 @@ test('Git spike fixture: isolation config, hooks, remotes, signing, and environm
     assert.equal(config.get('core.autocrlf'), 'false');
     assert.equal(config.get('core.fsmonitor'), 'false');
     assert.equal(config.get('core.filemode'), 'false');
-    assert.equal(config.get('core.hookspath'), '<TRIAL_ROOT>/runtime/hooks');
+    assert.equal(config.get('core.hookspath'), join('<TRIAL_ROOT>', 'runtime', 'hooks'));
     assert.deepEqual(snapshot.remotes, []);
     assert.deepEqual(snapshot.hooks, []);
     assert.deepEqual(snapshot.submodules, []);
