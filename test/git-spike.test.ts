@@ -89,16 +89,34 @@ test('Git spike fixture: two materializations have identical semantic state and 
   });
 });
 
-test('Git spike path tokens normalize Windows separators, case, drive spelling, and registered short-path aliases only', () => {
+test('Git spike path tokens replace registered Windows roots across separator, case, drive, and explicit alias spellings', () => {
   const roots = {
-    fixtureRoot: 'C:/Users/runneradmin/AppData/Local/Temp/trial/repository',
-    fixtureRootAliases: ['C:/Users/RUNNER~1/AppData/Local/Temp/trial/repository'],
-    siblingRoot: 'C:/Users/runneradmin/AppData/Local/Temp/trial/sibling',
-    trialRoot: 'C:/Users/runneradmin/AppData/Local/Temp/trial',
+    fixtureRoot: 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\trial\\repository',
+    fixtureRootAliases: ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\trial\\repository'],
+    siblingRoot: 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\trial\\sibling',
+    siblingRootAliases: ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\trial\\sibling'],
+    trialRoot: 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\trial',
+    trialRootAliases: ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\trial'],
   };
   assert.equal(
     tokenizeGitSpikePathPresentation(
       'worktree c:\\USERS\\RUNNERADMIN\\AppData\\Local\\Temp\\trial\\repository',
+      roots,
+      'win32',
+    ),
+    'worktree <FIXTURE_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      'worktree c:/users/runneradmin/appdata/LOCAL/temp/trial/repository',
+      roots,
+      'win32',
+    ),
+    'worktree <FIXTURE_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      'worktree C:/Users\\runneradmin/AppData\\Local/Temp\\trial/repository',
       roots,
       'win32',
     ),
@@ -114,16 +132,153 @@ test('Git spike path tokens normalize Windows separators, case, drive spelling, 
   );
   assert.equal(
     tokenizeGitSpikePathPresentation(
-      'worktree C:\\Users\\runneradmin\\AppData\\Local\\Temp\\trial\\repository-copy',
+      'worktree C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\trial\\sibling',
       roots,
       'win32',
     ),
-    'worktree <TRIAL_ROOT>/repository-copy',
+    'worktree <SIBLING_ROOT>',
   );
-  assert.notEqual(
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      'root C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\trial',
+      roots,
+      'win32',
+    ),
+    'root <TRIAL_ROOT>',
+  );
+});
+
+test('Git spike path tokens preserve every unmatched Windows-looking and non-path character', () => {
+  const roots = {
+    fixtureRoot: 'C:/registered/trial/repository',
+    fixtureRootAliases: ['C:/REGISTER~1/trial/repository'],
+    siblingRoot: 'C:/registered/trial/sibling',
+    trialRoot: 'C:/registered/trial',
+  };
+  const backslash = tokenizeGitSpikePathPresentation('alpha\\beta', roots, 'win32');
+  const slash = tokenizeGitSpikePathPresentation('alpha/beta', roots, 'win32');
+  assert.equal(backslash, 'alpha\\beta');
+  assert.equal(slash, 'alpha/beta');
+  assert.notEqual(backslash, slash);
+  assert.equal(
+    tokenizeGitSpikePathPresentation('D:\\unknown\\repository', roots, 'win32'),
+    'D:\\unknown\\repository',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('D:\\unknown/mixed\\repository', roots, 'win32'),
+    'D:\\unknown/mixed\\repository',
+  );
+  assert.equal(
     tokenizeGitSpikePathPresentation('notes\\plan.txt', roots, 'win32'),
-    tokenizeGitSpikePathPresentation('notes\\renamed.txt', roots, 'win32'),
+    'notes\\plan.txt',
   );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('literal\\backslash', roots, 'win32'),
+    'literal\\backslash',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('not-a-path\\value', roots, 'win32'),
+    'not-a-path\\value',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('unknown/forward/value', roots, 'win32'),
+    'unknown/forward/value',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('D:\\REGISTER~1\\trial\\repository', roots, 'win32'),
+    'D:\\REGISTER~1\\trial\\repository',
+  );
+});
+
+test('Git spike path tokens retain longest-root and boundary rules while preserving matched context bytes', () => {
+  const roots = {
+    fixtureRoot: 'C:/Users/runneradmin/AppData/Local/Temp/trial/repository',
+    siblingRoot: 'C:/Users/runneradmin/AppData/Local/Temp/trial/sibling',
+    trialRoot: 'C:/Users/runneradmin/AppData/Local/Temp/trial',
+  };
+  const repository = 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\trial\\repository';
+  assert.equal(
+    tokenizeGitSpikePathPresentation(repository, roots, 'win32'),
+    '<FIXTURE_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      `worktree ${repository}-copy`,
+      roots,
+      'win32',
+    ),
+    'worktree <TRIAL_ROOT>\\repository-copy',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      `path=${repository}\\notes/plan.txt`,
+      roots,
+      'win32',
+    ),
+    'path=<FIXTURE_ROOT>\\notes/plan.txt',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      `prefix-value=${repository}`,
+      roots,
+      'win32',
+    ),
+    'prefix-value=<FIXTURE_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(`prefix${repository}`, roots, 'win32'),
+    `prefix${repository}`,
+  );
+});
+
+test('Git spike path tokens keep POSIX matching case-sensitive and do not treat backslashes as separators', () => {
+  const roots = {
+    fixtureRoot: '/var/tmp/trial/repository',
+    siblingRoot: '/var/tmp/trial/sibling',
+    trialRoot: '/var/tmp/trial',
+  };
+  assert.equal(
+    tokenizeGitSpikePathPresentation('/var/tmp/trial/repository/notes', roots, 'linux'),
+    '<FIXTURE_ROOT>/notes',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('/var/tmp/trial\\repository', roots, 'linux'),
+    '/var/tmp/trial\\repository',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('/var/tmp/trial/Repository', roots, 'linux'),
+    '<TRIAL_ROOT>/Repository',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('/VAR/tmp/trial/repository', roots, 'linux'),
+    '/VAR/tmp/trial/repository',
+  );
+});
+
+test('Git spike snapshot: unmatched configuration bytes remain distinct in semantic hashes', () => {
+  withFixture('unmatched-config-bytes', (value) => {
+    runFixtureGit(value, ['config', '--local', 'oculory.unmatched-value', 'alpha\\beta']);
+    const backslash = captureGitSpikeSnapshot(value);
+    runFixtureGit(value, ['config', '--local', 'oculory.unmatched-value', 'alpha/beta']);
+    const slash = captureGitSpikeSnapshot(value);
+    assert.equal(configValue(backslash, 'oculory.unmatched-value'), 'alpha\\beta');
+    assert.equal(configValue(slash, 'oculory.unmatched-value'), 'alpha/beta');
+    assert.notEqual(backslash.rawEvidence.configSha256, slash.rawEvidence.configSha256);
+    assert.notEqual(backslash.layerHashes.isolation, slash.layerHashes.isolation);
+    assert.notEqual(backslash.stateHash, slash.stateHash);
+    assert.deepEqual(diffGitSpikeSnapshots(backslash, slash).changedLayers, ['isolation']);
+
+    runFixtureGit(value, ['config', '--local', 'oculory.unmatched-value', 'D:\\unknown\\repository']);
+    const nativeUnknown = captureGitSpikeSnapshot(value);
+    runFixtureGit(value, ['config', '--local', 'oculory.unmatched-value', 'D:/unknown/repository']);
+    const slashUnknown = captureGitSpikeSnapshot(value);
+    assert.equal(configValue(nativeUnknown, 'oculory.unmatched-value'), 'D:\\unknown\\repository');
+    assert.equal(configValue(slashUnknown, 'oculory.unmatched-value'), 'D:/unknown/repository');
+    assert.notEqual(nativeUnknown.rawEvidence.configSha256, slashUnknown.rawEvidence.configSha256);
+    assert.notEqual(nativeUnknown.layerHashes.isolation, slashUnknown.layerHashes.isolation);
+    assert.notEqual(nativeUnknown.stateHash, slashUnknown.stateHash);
+    assert.deepEqual(diffGitSpikeSnapshots(nativeUnknown, slashUnknown).changedLayers, ['isolation']);
+  });
 });
 
 test('Git spike snapshot diagnostics are deterministic, bounded, and redact absolute fixture roots', () => {
@@ -461,6 +616,13 @@ function fakeDiff(changedLayers: GitSpikeSnapshotDiff['changedLayers']): GitSpik
     sentinelMetadataChanged: false,
     reflogRawEvidenceChanged: false,
   };
+}
+
+function configValue(
+  snapshot: ReturnType<typeof captureGitSpikeSnapshot>,
+  key: string,
+): string | undefined {
+  return snapshot.config.find((entry) => entry.key === key)?.value;
 }
 
 function findExecutable(name: string): string {

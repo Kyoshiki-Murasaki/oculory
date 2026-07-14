@@ -628,20 +628,40 @@ export function tokenizeGitSpikePathPresentation(
   roots: GitSpikePathTokenRoots,
   platform: NodeJS.Platform = process.platform,
 ): string {
+  const windows = platform === 'win32';
   const replacements = [
     ...[roots.fixtureRoot, ...(roots.fixtureRootAliases ?? [])].map((root) => ({ root, token: '<FIXTURE_ROOT>' })),
     ...[roots.siblingRoot, ...(roots.siblingRootAliases ?? [])].map((root) => ({ root, token: '<SIBLING_ROOT>' })),
     ...[roots.trialRoot, ...(roots.trialRootAliases ?? [])].map((root) => ({ root, token: '<TRIAL_ROOT>' })),
-  ].map((entry) => ({ ...entry, root: portablePath(entry.root) }))
-    .filter((entry) => entry.root.length > 0)
+  ].filter((entry) => entry.root.length > 0)
     .sort((a, b) => b.root.length - a.root.length || compareStrings(a.root, b.root));
-  let result = portablePath(value);
   const seen = new Set<string>();
-  for (const replacement of replacements) {
-    const key = `${platform === 'win32' ? replacement.root.toLowerCase() : replacement.root}\0${replacement.token}`;
-    if (seen.has(key)) continue;
+  const uniqueReplacements = replacements.filter((replacement) => {
+    // This comparison spelling never becomes output; unmatched bytes always come from `value`.
+    const comparisonRoot = windows
+      ? portablePath(replacement.root).toLowerCase()
+      : replacement.root;
+    const key = `${comparisonRoot}\0${replacement.token}`;
+    if (seen.has(key)) return false;
     seen.add(key);
-    result = replaceRootOccurrences(result, replacement.root, replacement.token, platform === 'win32');
+    return true;
+  });
+
+  let result = '';
+  let cursor = 0;
+  while (cursor < value.length) {
+    const replacement = uniqueReplacements.find(({ root }) =>
+      rootMatchesAt(value, cursor, root, windows) &&
+      isPathBoundaryBefore(value, cursor) &&
+      isPathBoundaryAfter(value, cursor + root.length, windows)
+    );
+    if (replacement === undefined) {
+      result += value[cursor]!;
+      cursor += 1;
+      continue;
+    }
+    result += replacement.token;
+    cursor += replacement.root.length;
   }
   return result;
 }
@@ -678,32 +698,34 @@ function samePhysicalEntry(a: string, b: string): boolean {
   }
 }
 
-function replaceRootOccurrences(value: string, root: string, token: string, caseInsensitive: boolean): string {
-  const searchValue = caseInsensitive ? value.toLowerCase() : value;
-  const searchRoot = caseInsensitive ? root.toLowerCase() : root;
-  let result = '';
-  let cursor = 0;
-  while (cursor < value.length) {
-    const index = searchValue.indexOf(searchRoot, cursor);
-    if (index < 0) break;
-    const end = index + root.length;
-    if (isPathBoundaryBefore(value, index) && isPathBoundaryAfter(value, end)) {
-      result += value.slice(cursor, index) + token;
-      cursor = end;
-    } else {
-      result += value.slice(cursor, index + 1);
-      cursor = index + 1;
+function rootMatchesAt(value: string, start: number, root: string, windows: boolean): boolean {
+  if (start + root.length > value.length) return false;
+  for (let index = 0; index < root.length; index += 1) {
+    const inputCharacter = value[start + index]!;
+    const rootCharacter = root[index]!;
+    if (windows && isWindowsPathSeparator(inputCharacter) && isWindowsPathSeparator(rootCharacter)) {
+      continue;
+    }
+    if (windows
+      ? inputCharacter.toLowerCase() !== rootCharacter.toLowerCase()
+      : inputCharacter !== rootCharacter) {
+      return false;
     }
   }
-  return result + value.slice(cursor);
+  return true;
+}
+
+function isWindowsPathSeparator(value: string): boolean {
+  return value === '/' || value === '\\';
 }
 
 function isPathBoundaryBefore(value: string, index: number): boolean {
   return index === 0 || /[\s"'=(:,]/.test(value[index - 1]!);
 }
 
-function isPathBoundaryAfter(value: string, index: number): boolean {
-  return index === value.length || /[\s/"'),]/.test(value[index]!);
+function isPathBoundaryAfter(value: string, index: number, windows: boolean): boolean {
+  return index === value.length || /[\s/"'),]/.test(value[index]!) ||
+    (windows && value[index] === '\\');
 }
 
 function portablePath(value: string): string {
