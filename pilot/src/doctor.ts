@@ -309,20 +309,8 @@ function normalizeVersion(value: string): string {
 }
 
 function validatePinnedDistributions(runtime: GitSpikeRuntimeInspection, repositoryRoot: string): void {
-  const constraints = readFileSync(
-    resolve(repositoryRoot, 'pilot/constraints.git-mcp-2026.7.10-py312.txt'),
-    'utf8',
-  )
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith('#'));
-  const expected = new Map(constraints.map((line) => {
-    const [name, version, extra] = line.split('==');
-    if (name === undefined || version === undefined || extra !== undefined) throw new Error('invalid pilot target constraint');
-    return [canonicalPackageName(name), version] as const;
-  }));
+  const expected = expectedPilotTargetDistributions(repositoryRoot);
   const observed = new Map(Object.entries(runtime.distributions).map(([name, version]) => [canonicalPackageName(name), version]));
-  if (expected.size !== 33) throw new Error('pilot target constraint count differs');
   for (const [name, version] of expected) {
     if (observed.get(name) !== version) throw new Error(`pilot target distribution differs: ${name}`);
   }
@@ -330,6 +318,33 @@ function validatePinnedDistributions(runtime: GitSpikeRuntimeInspection, reposit
   for (const name of observed.keys()) {
     if (!expected.has(name) && !allowedBootstrapExtras.has(name)) throw new Error(`unreviewed pilot target distribution: ${name}`);
   }
+}
+
+export function expectedPilotTargetDistributions(
+  repositoryRoot: string,
+  platform: NodeJS.Platform = process.platform,
+): ReadonlyMap<string, string> {
+  const constraints = readFileSync(
+    resolve(repositoryRoot, 'pilot/constraints.git-mcp-2026.7.10-py312.txt'),
+    'utf8',
+  )
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('#'));
+  if (constraints.length !== 35) throw new Error('pilot target constraint count differs');
+  const expected = new Map<string, string>();
+  for (const line of constraints) {
+    const match = /^([A-Za-z0-9_.-]+)==([^;\s]+)(?:;\s*sys_platform\s*==\s*"([^"]+)")?$/.exec(line);
+    if (match === null) throw new Error('invalid pilot target constraint');
+    const [, rawName, version, markerPlatform] = match;
+    if (rawName === undefined || version === undefined) throw new Error('invalid pilot target constraint');
+    if (markerPlatform !== undefined && markerPlatform !== 'win32') throw new Error('unsupported pilot target platform marker');
+    if (markerPlatform !== undefined && markerPlatform !== platform) continue;
+    expected.set(canonicalPackageName(rawName), version);
+  }
+  const requiredSize = platform === 'win32' ? 35 : 33;
+  if (expected.size !== requiredSize) throw new Error('pilot target platform constraint count differs');
+  return expected;
 }
 
 function canonicalPackageName(value: string): string {

@@ -21,7 +21,7 @@ Use `--json` with `pilot:doctor` for machine-readable output. `pilot:run` and `p
 
 ## Pinned target prerequisite
 
-The pilot uses CPython 3.12.13 and `mcp-server-git==2026.7.10`. All 33 behavior dependencies must match `constraints.git-mcp-2026.7.10-py312.txt`; a standard virtual environment may additionally contain only `pip`, `setuptools`, or `wheel`. Doctor independently verifies the target distribution, installed server-source digest, console entry point, Python patch version, Git executable, and dependency versions. The cross-platform path below uses uv 0.11.28 to obtain the exact managed Python patch even on platforms where official binary installers have moved to a newer supported line.
+The pilot uses CPython 3.12.13 and `mcp-server-git==2026.7.10`. All 33 common behavior distributions plus the exact two Windows-only distributions must match `constraints.git-mcp-2026.7.10-py312.txt`; a standard virtual environment may additionally contain only `pip`, `setuptools`, or `wheel`. Doctor independently verifies the platform-selected distribution set, installed server-source digest, console entry point, Python patch version, Git executable, and dependency versions. The cross-platform path below uses uv 0.11.28 to obtain the exact managed Python patch even on platforms where official binary installers have moved to a newer supported line.
 
 On a Unix-like host, create a disposable environment outside the repository:
 

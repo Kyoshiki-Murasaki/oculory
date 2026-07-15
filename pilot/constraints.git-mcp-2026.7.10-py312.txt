@@ -1,13 +1,15 @@
 # Cross-platform exact-version constraints for the provider-free pilot.
-# Versions match the reviewed Phase 7 macOS lock. Platform wheel hashes remain
-# governed by each platform's package index metadata and are not claimed to be
-# identical to the macOS-arm64 wheel hashes in the committed pylock.
+# The 33 common versions match the reviewed Phase 7 macOS lock; the two marked
+# Windows-only runtime dependencies are separately exact-pinned. Platform wheel
+# hashes remain governed by each platform's package index metadata and are not
+# claimed to match the macOS-arm64 wheel hashes in the committed pylock.
 annotated-types==0.7.0
 anyio==4.14.1
 attrs==26.1.0
 certifi==2026.6.17
 cffi==2.1.0
 click==8.4.2
+colorama==0.4.6; sys_platform == "win32"
 cryptography==49.0.0
 gitdb==4.0.12
 gitpython==3.1.50
@@ -27,6 +29,7 @@ pydantic-settings==2.14.2
 pyjwt==2.13.0
 python-dotenv==1.2.2
 python-multipart==0.0.32
+pywin32==312; sys_platform == "win32"
 referencing==0.37.0
 rpds-py==2026.6.3
 smmap==5.0.3

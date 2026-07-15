@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderPilotDoctorText, runPilotDoctor, supportedNodeVersion } from '../pilot/src/doctor.js';
+import { expectedPilotTargetDistributions, renderPilotDoctorText, runPilotDoctor, supportedNodeVersion } from '../pilot/src/doctor.js';
 import { runBoundedProcess } from '../pilot/src/process.js';
 import { providerConfigurationPresent, validatePilotOutputPath } from '../pilot/src/safety.js';
 import { runPilotWorkflow } from '../pilot/src/workflow.js';
@@ -16,6 +16,17 @@ test('pilot doctor rejects unsupported Node versions', () => {
   assert.equal(supportedNodeVersion('v25.0.0'), false);
   assert.equal(supportedNodeVersion('v22.13.0'), true);
   assert.equal(supportedNodeVersion('v24.7.0'), true);
+});
+
+test('pilot target constraints select the exact Unix and Windows distribution sets', () => {
+  const unix = expectedPilotTargetDistributions(ROOT, 'darwin');
+  const windows = expectedPilotTargetDistributions(ROOT, 'win32');
+  assert.equal(unix.size, 33);
+  assert.equal(unix.has('colorama'), false);
+  assert.equal(unix.has('pywin32'), false);
+  assert.equal(windows.size, 35);
+  assert.equal(windows.get('colorama'), '0.4.6');
+  assert.equal(windows.get('pywin32'), '312');
 });
 
 test('pilot doctor reports missing Git and pinned target without reading provider values', async () => {
