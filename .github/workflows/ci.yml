@@ -40,6 +40,11 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           package-manager-cache: false
+      - name: Set up Python for the provider-free pilot target
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: 3.12.13
+          cache: false
       - run: npm ci
       - run: npm run build
       - run: npm run typecheck
@@ -55,6 +60,10 @@ jobs:
           node bin/oculory --help
           node bin/oculory --version
           node bin/oculory doctor
+      - name: Prepare the pinned provider-free Git MCP target
+        run: node scripts/prepare-pilot-target.mjs
+      - name: Run the offline pilot smoke with spaces
+        run: npm run pilot:smoke -- --spaces
 
   offline-experiments:
     name: Deterministic offline experiments
