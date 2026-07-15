@@ -87,6 +87,7 @@ See:
 - [Phase 6 final audit](docs/41_PHASE6_EXTERNAL_GIT_FINAL_AUDIT_AND_FREEZE.md)
 - [Gate F0 offline record](docs/43_GATE_F0_OFFLINE_PREPARATION_AND_VALIDATION.md)
 - [Phase 7 public engineering readiness](docs/44_PHASE7_PUBLIC_ENGINEERING_READINESS.md)
+- [Phase 8 provider-free external-developer pilot](docs/45_PHASE8_OFFLINE_EXTERNAL_DEVELOPER_PILOT.md)
 
 Raw external traces, transcripts, journals, and prior live evidence are intentionally gitignored under `.oculory/`; they are not stored in GitHub or the npm package. Contributors must not attach private evidence to issues or pull requests.
 
