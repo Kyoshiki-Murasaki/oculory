@@ -27,14 +27,14 @@ const environment = pickEnvironment([
   'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY',
 ]);
 
-const bootstrapPython = process.platform === 'win32' ? 'python.exe' : 'python3';
-run(bootstrapPython, ['--version']);
-run(bootstrapPython, ['-m', 'venv', root]);
+run('uv', ['--version']);
+run('uv', ['python', 'install', EXPECTED_PYTHON, '--no-progress', '--no-config']);
+run('uv', ['venv', '--python', EXPECTED_PYTHON, '--managed-python', '--no-project', '--no-config', root]);
 const executableDirectory = join(root, process.platform === 'win32' ? 'Scripts' : 'bin');
 const python = join(executableDirectory, process.platform === 'win32' ? 'python.exe' : 'python');
-run(python, [
-  '-m', 'pip', 'install', '--disable-pip-version-check', '--no-input', '--only-binary=:all:',
-  '--constraint', constraints,
+run('uv', [
+  'pip', 'install', '--python', python, '--only-binary=:all:',
+  '--constraints', constraints, '--no-progress', '--no-config',
   `mcp-server-git==${EXPECTED_TARGET}`,
 ]);
 

@@ -21,15 +21,17 @@ Use `--json` with `pilot:doctor` for machine-readable output. `pilot:run` and `p
 
 ## Pinned target prerequisite
 
-The pilot uses CPython 3.12.13 and `mcp-server-git==2026.7.10`. All 33 behavior dependencies must match `constraints.git-mcp-2026.7.10-py312.txt`; a standard virtual environment may additionally contain only `pip`, `setuptools`, or `wheel`. Doctor independently verifies the target distribution, installed server-source digest, console entry point, Python patch version, Git executable, and dependency versions.
+The pilot uses CPython 3.12.13 and `mcp-server-git==2026.7.10`. All 33 behavior dependencies must match `constraints.git-mcp-2026.7.10-py312.txt`; a standard virtual environment may additionally contain only `pip`, `setuptools`, or `wheel`. Doctor independently verifies the target distribution, installed server-source digest, console entry point, Python patch version, Git executable, and dependency versions. The cross-platform path below uses uv 0.11.28 to obtain the exact managed Python patch even on platforms where official binary installers have moved to a newer supported line.
 
 On a Unix-like host, create a disposable environment outside the repository:
 
 ```sh
-python3.12 -m venv "<temporary-directory>/oculory pilot target"
-"<temporary-directory>/oculory pilot target/bin/python" -m pip install \
-  --disable-pip-version-check --no-input --only-binary=:all: \
-  --constraint pilot/constraints.git-mcp-2026.7.10-py312.txt \
+uv python install 3.12.13
+uv venv --python 3.12.13 --managed-python --no-project \
+  "<temporary-directory>/oculory pilot target"
+uv pip install --python "<temporary-directory>/oculory pilot target/bin/python" \
+  --only-binary=:all: \
+  --constraints pilot/constraints.git-mcp-2026.7.10-py312.txt \
   "mcp-server-git==2026.7.10"
 export PATH="<temporary-directory>/oculory pilot target/bin:$PATH"
 ```
@@ -37,10 +39,12 @@ export PATH="<temporary-directory>/oculory pilot target/bin:$PATH"
 On Windows PowerShell:
 
 ```powershell
-py -3.12 -m venv "$env:TEMP\oculory pilot target"
-& "$env:TEMP\oculory pilot target\Scripts\python.exe" -m pip install `
-  --disable-pip-version-check --no-input --only-binary=:all: `
-  --constraint pilot/constraints.git-mcp-2026.7.10-py312.txt `
+uv python install 3.12.13
+uv venv --python 3.12.13 --managed-python --no-project `
+  "$env:TEMP\oculory pilot target"
+uv pip install --python "$env:TEMP\oculory pilot target\Scripts\python.exe" `
+  --only-binary=:all: `
+  --constraints pilot/constraints.git-mcp-2026.7.10-py312.txt `
   "mcp-server-git==2026.7.10"
 $env:Path = "$env:TEMP\oculory pilot target\Scripts;$env:Path"
 ```
