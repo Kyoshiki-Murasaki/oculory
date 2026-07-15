@@ -14,7 +14,8 @@ A single zero-runtime-dependency TypeScript package containing:
 - a review/approve workflow; a versioned suite compiler; a replay runner; a deterministic evaluator;
 - a schema-diff + smoke-call baseline proxy; comparison and Markdown/JSON reporting;
 - a full CLI (`oculory record → verify → mine → review → approve → suite → run → compare`);
-- a 395-test offline baseline at the start of the 2026-07-12 final Phase 6 audit, three pre-registered local scripted experiments, isolated live-run support, risk-classified approval gates, external Git evidence validation, and budget guards.
+- a 422-test offline baseline at the start of Phase 7, three pre-registered local scripted experiments, isolated live-run support, risk-classified approval gates, external Git evidence validation, and budget guards;
+- a portable Node-based package launcher, metadata-derived version output, cross-platform offline CI, and installed-tarball verification added by Phase 7.
 
 ## What it deliberately does not do
 No web UI, accounts, billing, cloud, hosted anything, benchmark leaderboard, certification, browser automation, or destructive production execution. See docs/01 §Non-goals.
@@ -26,20 +27,27 @@ The initial repository was built in an offline environment. Later controlled liv
 3. **Scripted deterministic agent policies remain the reproducible baseline.** Small live `gpt-4.1-mini` probes add controlled model evidence but do not establish general model reliability (docs/25, docs/27, docs/29).
 4. **Internal schema-smoke baseline proxy** instead of an external OSS baseline (network-gated; docs/19).
 
-## Immediate objective
-Phase 6 has passed its final local audit, archive, and freeze criteria. Preserve the resulting freeze commit and annotated tag `phase6-external-git-scripted-validated`. Formal Gate B attempt 1 remains failed; repaired attempt 2 passed; Gates C and D passed; Gate E1 completed; and Gate E passed. Gate F0 subsequently passed its offline-only scope under deterministic mocks and the pinned local Git MCP target; no real provider/model call occurred. The first F0 authoritative attempt failed and remains preserved; the repaired new-ID attempt passed six/six sessions and 57/57 registered faults. Gate F1/F2 remain unauthorized. Read `docs/30_PROJECT_STATUS_AND_NEXT_STEPS.md` and `docs/43_GATE_F0_OFFLINE_PREPARATION_AND_VALIDATION.md` first.
+## Public history and immediate objective
+The canonical public repository is `Kyoshiki-Murasaki/oculory` on branch `main`. It deliberately begins at the single fresh public root `616ca96548e763ab3bb401f4626dcac2857a647b` (`Initial public release of Oculory`). This is a one-root publication discontinuity: older commit hashes, the `master` branch, milestone tags, and pull-request chronology recorded in historical evidence documents belong only to the legacy/private chronology and are not reachable current public refs. Do not import, graft, merge, or reconstruct that history.
+
+Gate F0 is already present in the fresh public root; there is no current Gate F0 pull request awaiting review. Formal Gate B attempt 1 remains historically failed; repaired attempt 2 passed; Gates C and D passed; Gate E1 completed; Gate E passed; and Gate F0 passed its offline deterministic-mock scope. The first F0 authoritative attempt remains preserved as failed and the repaired new-ID attempt passed six/six sessions and 57/57 registered faults. Gate F1/F2 remain unauthorized.
+
+Phase 7 adds bounded public engineering readiness: offline GitHub Actions CI, a cross-platform packaged CLI, package-content and consumer-install verification, contributor guidance, and fresh-history reconciliation. It is not a production-readiness declaration and does not authorize provider traffic. Read `docs/30_PROJECT_STATUS_AND_NEXT_STEPS.md`, `docs/44_PHASE7_PUBLIC_ENGINEERING_READINESS.md`, and `docs/43_GATE_F0_OFFLINE_PREPARATION_AND_VALIDATION.md` first.
 
 The Phase 6 record selects the target in docs/31, defines the gates in docs/32, records the generic stdio client in docs/33, preserves the bounded spike in docs/34, records Gate C in docs/35, preserves the failed first formal Gate B attempt in docs/36, records its repair and passing attempt 2 in docs/37, validates Gate D in docs/38, records completed Gate E1 in docs/39, records passing Gate E in docs/40, audits the complete freeze in docs/41, proposes but does not authorize live Gate F in docs/42, and records the later offline-only Gate F0 in docs/43. Gates A, current B, C, D, E, and F0 passed their declared criteria; Gate B attempt 1 and the first F0 authoritative attempt remain failed. F1/F2 have not started.
 
 ## Exact next commands
-    npm install          # fetches typescript + @types/node (devDeps only)
+    npm ci               # installs the exact lockfile (devDeps only)
     npm run build
+    npm run typecheck
     npm test
-    ./bin/oculory doctor
-    ./bin/oculory experiment
+    npm run test:gate-f0
+    node bin/oculory doctor
+    npm run experiment
+    npm run verify:package
 
 ## Reading order
-00 (this) → 30 current status/handoff → 43 Gate F0 offline evidence → 41 final Phase 6 audit/freeze → 42 original Gate F proposal → 31 external-target selection → 32 integration/validation plan → 33 stdio-client architecture → 34 Git MCP Gate A/B spike → 35 Git MCP Gate C transport integrity → 36 failed formal Git MCP Gate B attempt → 37 cleanup repair and passing attempt 2 → 38 Gate D verifier validity → 39 Gate E1 scripted recording/mining → 40 Gate E replay/mutation validation → 01 product definition → 09 CLI → 05 experiment protocol → 21 historical audit. Before any future provider traffic: 43 and 42, then 23 and 24.
+00 (this) → 30 current status/handoff → 44 Phase 7 public engineering readiness → 43 Gate F0 offline evidence → 41 final Phase 6 audit/freeze → 42 original Gate F proposal → 31 external-target selection → 32 integration/validation plan → 33 stdio-client architecture → 34 Git MCP Gate A/B spike → 35 Git MCP Gate C transport integrity → 36 failed formal Git MCP Gate B attempt → 37 cleanup repair and passing attempt 2 → 38 Gate D verifier validity → 39 Gate E1 scripted recording/mining → 40 Gate E replay/mutation validation → 01 product definition → 09 CLI → 05 experiment protocol → 21 historical audit. Before any future provider traffic: 43 and 42, then 23 and 24.
 
 ## File guide
 | Doc | Contains | Use when |
@@ -85,3 +93,4 @@ The Phase 6 record selects the target in docs/31, defines the gates in docs/32, 
 | 41 | Final Phase 6 chronology, evidence inventory, integrity audit, archive, freeze, and publication record | reviewing the scripted milestone freeze |
 | 42 | Provider-neutral, separately budgeted, unexecuted Gate F proposal | reviewing whether any later model experiment should be authorized |
 | 43 | Gate F0 provider-neutral offline implementation, mock validation, faults, evidence, and F1 boundary | reviewing the offline substrate and deciding whether to authorize F1 |
+| 44 | Phase 7 public engineering readiness, CI, packaging, cross-platform CLI, and fresh-history reconciliation | reproducing or reviewing the public engineering workflow |

@@ -549,7 +549,15 @@ test('stdio client: request timeout is explicit, sends cancellation, and settles
     );
     const close = await client.close();
     assert.equal(close.allRequestsSettled, true);
-    assert.ok(close.processExit, 'timeout teardown must observe process exit after settling the request');
+    assert.equal(close.liveness.childAlive, false);
+    assert.notEqual(close.liveness.managedProcessGroupAlive, true);
+    const processExit = await waitForTranscriptEvent(
+      client,
+      (event) => event.kind === 'process_exit',
+      'timeout teardown process exit after settling the request',
+    );
+    assert.equal(processExit.exitCode, 0);
+    assert.equal(client.diagnostics().processExit?.code, 0);
     assert.equal(client.diagnostics().outstandingRequestIds.length, 0);
   });
 });
@@ -660,20 +668,37 @@ test('stdio client: stdin-close graceful shutdown succeeds for a cooperative fix
     const close = await client.close();
     assert.equal(close.graceful, true);
     assert.equal(close.escalation, 'none');
-    assert.equal(close.processExit?.code, 0);
-    assert.equal(close.processExit?.signal, null);
+    assert.equal(close.liveness.childAlive, false);
+    assert.notEqual(close.liveness.managedProcessGroupAlive, true);
+    const processExit = await waitForTranscriptEvent(
+      client,
+      (event) => event.kind === 'process_exit',
+      'graceful stdin-close process exit',
+    );
+    assert.equal(processExit.exitCode, 0);
+    assert.equal(processExit.signal, null);
+    assert.equal(client.diagnostics().processExit?.code, 0);
+    assert.equal(client.diagnostics().processExit?.signal, null);
   });
 });
 
-test('stdio client: refusal to exit escalates through SIGTERM to bounded SIGKILL', async () => {
+test('stdio client: refusal to exit reaches the platform-bounded forced termination', async () => {
   await withFixture(
     'refuse-exit',
     async (client) => {
       await client.initialize();
       const close = await client.close();
       assert.equal(close.graceful, false);
-      assert.equal(close.escalation, 'sigkill');
-      assert.equal(close.processExit?.signal, 'SIGKILL');
+      // Windows terminates the child at SIGTERM; POSIX can observe the fixture
+      // refusing SIGTERM and therefore must continue to bounded SIGKILL. On
+      // Windows, liveness can prove death before Node delivers the exit event.
+      if (process.platform === 'win32') {
+        assert.equal(close.escalation, 'sigterm');
+        if (close.processExit !== null) assert.equal(close.processExit.signal, 'SIGTERM');
+      } else {
+        assert.equal(close.escalation, 'sigkill');
+        assert.equal(close.processExit?.signal, 'SIGKILL');
+      }
       assert.equal(close.liveness.childAlive, false);
       assert.notEqual(close.liveness.managedProcessGroupAlive, true);
     },

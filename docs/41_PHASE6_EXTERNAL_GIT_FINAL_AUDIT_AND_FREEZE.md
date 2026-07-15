@@ -2,6 +2,8 @@
 
 _Audit date: 2026-07-12. This report binds the audit to pre-freeze source commit `5ef4fa176fc5ac2e042f473a43ca2d57097269e7` on `master`. It does not contain or predict the hash of the commit that contains this report._
 
+> Fresh-public-history note (2026-07-13): every branch, commit, tag, and publication reference in this report records the legacy/private chronology. Those refs were deliberately not imported into the fresh public repository. The current public history begins at `616ca96548e763ab3bb401f4626dcac2857a647b` on `main`.
+
 ## Executive decision
 
 The pre-freeze repository, chronology, tracked artifacts, temporary Gate A–D reports, retained Gate B attempt-2 directory, 81-file historical live root, and all six immediate external evidence roots were independently inspected. No substantive implementation or evidence defect was found. The documentation, evidence index, and Gate F proposal are suitable for the audit-preparation commit.

@@ -13,6 +13,7 @@ import {
 } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { canonicalJson, hashJson } from '../schema/canonical.js';
+import { syncDirectoryEntry } from '../schema/durable-write.js';
 import type { Json } from '../schema/types.js';
 import {
   EXTERNAL_TRACE_SCHEMA_VERSION,
@@ -194,8 +195,7 @@ function writeExclusive(path: string, bytes: Buffer): void {
     closeSync(descriptor);
     descriptor = null;
     renameSync(temporary, path);
-    const directory = openSync(dirname(path), 'r');
-    try { fsyncSync(directory); } finally { closeSync(directory); }
+    syncDirectoryEntry(dirname(path));
   } finally {
     if (descriptor !== null) closeSync(descriptor);
   }

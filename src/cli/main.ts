@@ -109,6 +109,11 @@ try {
       help();
       break;
 
+    case 'version':
+    case '--version':
+      out(packageVersion());
+      break;
+
     case 'init': {
       store.init();
       out(`Initialised store at ${store.root}. Next: oculory doctor`);
@@ -989,6 +994,7 @@ function help(): void {
 Pipeline:   record → verify → mine → review → approve → suite → run → compare
 Usage:      oculory <command> [flags]
 
+  version                    print the package version
   init                       create the .oculory store
   doctor [--model <name>]    check environment (node, sqlite, fixture, gitignore, .env, key)
   inspect [--mutation id]    list the demo server's tools
@@ -1056,4 +1062,19 @@ Run-isolation flags (model-* commands): --out-dir <path> --run-id <id> --clean -
 Global flags: --store <dir> --fixture <path> --json
 Exit codes: 0 ok · 1 usage error · 2 regression · 3 internal error
 `);
+}
+
+function packageVersion(): string {
+  const packagePath = join(import.meta.dirname ?? '.', '..', '..', '..', 'package.json');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(packagePath, 'utf8'));
+  } catch (error) {
+    return fail(`could not read package metadata: ${error instanceof Error ? error.message : String(error)}`, 3);
+  }
+  const version = (parsed as { version?: unknown }).version;
+  if (typeof version !== 'string' || version.length === 0) {
+    return fail('package metadata does not contain a valid version', 3);
+  }
+  return version;
 }

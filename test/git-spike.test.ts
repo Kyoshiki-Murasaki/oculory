@@ -1,9 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  chmodSync,
   existsSync,
   mkdtempSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -33,10 +35,16 @@ import {
   changedIndexPaths,
   changedRefNames,
   diffGitSpikeSnapshots,
+  GIT_SPIKE_SNAPSHOT_LAYERS,
   snapshotIndexMatchesCommit,
   snapshotWorktreeMatchesCommit,
+  tokenizeGitSpikePathPresentation,
   type GitSpikeSnapshotDiff,
 } from '../src/targets/git-spike/snapshot.js';
+import {
+  explainGitSpikeSnapshotDifference,
+  formatGitSpikeSnapshotDiagnostic,
+} from '../src/targets/git-spike/snapshot-diagnostic.js';
 
 const GIT = findExecutable('git');
 const CLEAN_PROCESS: GitSpikeProcessCleanupEvidence = {
@@ -48,15 +56,24 @@ const CLEAN_PROCESS: GitSpikeProcessCleanupEvidence = {
 };
 
 test('Git spike fixture: two materializations have identical semantic state and commit IDs', () => {
-  withBase((base) => {
-    const first = fixture(base, 'determinism-one');
+  withIndependentBases((firstBase, secondBase) => {
+    const first = fixture(firstBase, 'determinism-one');
     const firstSnapshot = captureGitSpikeSnapshot(first);
     const firstCleanup = cleanupGitSpikeFixture(first, CLEAN_PROCESS);
-    const second = fixture(base, 'determinism-two');
+    const second = fixture(secondBase, 'determinism-two');
     const secondSnapshot = captureGitSpikeSnapshot(second);
     const secondCleanup = cleanupGitSpikeFixture(second, CLEAN_PROCESS);
 
-    assert.equal(firstSnapshot.stateHash, secondSnapshot.stateHash);
+    const diagnostic = formatGitSpikeSnapshotDiagnostic(explainGitSpikeSnapshotDifference(
+      firstSnapshot,
+      secondSnapshot,
+      { beforeFixture: first, afterFixture: second },
+    ));
+    assert.equal(firstSnapshot.fixtureRecipeDigest, secondSnapshot.fixtureRecipeDigest, diagnostic);
+    for (const layer of GIT_SPIKE_SNAPSHOT_LAYERS) {
+      assert.equal(firstSnapshot.layerHashes[layer], secondSnapshot.layerHashes[layer], diagnostic);
+    }
+    assert.equal(firstSnapshot.stateHash, secondSnapshot.stateHash, diagnostic);
     assert.equal(first.mainHead, second.mainHead);
     assert.equal(first.featureSeedHead, second.featureSeedHead);
     assert.equal(first.siblingHead, second.siblingHead);
@@ -65,8 +82,232 @@ test('Git spike fixture: two materializations have identical semantic state and 
     assert.equal(firstSnapshot.indexMatchesHead, true);
     assert.equal(firstSnapshot.commits.length, 2);
     assert.match(first.mainHead, /^[a-f0-9]{40}$/);
+    assert.notEqual(first.repositoryRoot, second.repositoryRoot);
+    assert.notEqual(first.id, second.id);
     assert.equal(firstCleanup.passed, true);
     assert.equal(secondCleanup.passed, true);
+  });
+});
+
+test('Git spike path tokens replace registered Windows roots across separator, case, drive, and explicit alias spellings', () => {
+  const roots = {
+    fixtureRoot: 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\trial\\repository',
+    fixtureRootAliases: ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\trial\\repository'],
+    siblingRoot: 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\trial\\sibling',
+    siblingRootAliases: ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\trial\\sibling'],
+    trialRoot: 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\trial',
+    trialRootAliases: ['C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\trial'],
+  };
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      'worktree c:\\USERS\\RUNNERADMIN\\AppData\\Local\\Temp\\trial\\repository',
+      roots,
+      'win32',
+    ),
+    'worktree <FIXTURE_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      'worktree c:/users/runneradmin/appdata/LOCAL/temp/trial/repository',
+      roots,
+      'win32',
+    ),
+    'worktree <FIXTURE_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      'worktree C:/Users\\runneradmin/AppData\\Local/Temp\\trial/repository',
+      roots,
+      'win32',
+    ),
+    'worktree <FIXTURE_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      'worktree C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\trial\\repository',
+      roots,
+      'win32',
+    ),
+    'worktree <FIXTURE_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      'worktree C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\trial\\sibling',
+      roots,
+      'win32',
+    ),
+    'worktree <SIBLING_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      'root C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\trial',
+      roots,
+      'win32',
+    ),
+    'root <TRIAL_ROOT>',
+  );
+});
+
+test('Git spike path tokens preserve every unmatched Windows-looking and non-path character', () => {
+  const roots = {
+    fixtureRoot: 'C:/registered/trial/repository',
+    fixtureRootAliases: ['C:/REGISTER~1/trial/repository'],
+    siblingRoot: 'C:/registered/trial/sibling',
+    trialRoot: 'C:/registered/trial',
+  };
+  const backslash = tokenizeGitSpikePathPresentation('alpha\\beta', roots, 'win32');
+  const slash = tokenizeGitSpikePathPresentation('alpha/beta', roots, 'win32');
+  assert.equal(backslash, 'alpha\\beta');
+  assert.equal(slash, 'alpha/beta');
+  assert.notEqual(backslash, slash);
+  assert.equal(
+    tokenizeGitSpikePathPresentation('D:\\unknown\\repository', roots, 'win32'),
+    'D:\\unknown\\repository',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('D:\\unknown/mixed\\repository', roots, 'win32'),
+    'D:\\unknown/mixed\\repository',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('notes\\plan.txt', roots, 'win32'),
+    'notes\\plan.txt',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('literal\\backslash', roots, 'win32'),
+    'literal\\backslash',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('not-a-path\\value', roots, 'win32'),
+    'not-a-path\\value',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('unknown/forward/value', roots, 'win32'),
+    'unknown/forward/value',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('D:\\REGISTER~1\\trial\\repository', roots, 'win32'),
+    'D:\\REGISTER~1\\trial\\repository',
+  );
+});
+
+test('Git spike path tokens retain longest-root and boundary rules while preserving matched context bytes', () => {
+  const roots = {
+    fixtureRoot: 'C:/Users/runneradmin/AppData/Local/Temp/trial/repository',
+    siblingRoot: 'C:/Users/runneradmin/AppData/Local/Temp/trial/sibling',
+    trialRoot: 'C:/Users/runneradmin/AppData/Local/Temp/trial',
+  };
+  const repository = 'C:\\Users\\runneradmin\\AppData\\Local\\Temp\\trial\\repository';
+  assert.equal(
+    tokenizeGitSpikePathPresentation(repository, roots, 'win32'),
+    '<FIXTURE_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      `worktree ${repository}-copy`,
+      roots,
+      'win32',
+    ),
+    'worktree <TRIAL_ROOT>\\repository-copy',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      `path=${repository}\\notes/plan.txt`,
+      roots,
+      'win32',
+    ),
+    'path=<FIXTURE_ROOT>\\notes/plan.txt',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(
+      `prefix-value=${repository}`,
+      roots,
+      'win32',
+    ),
+    'prefix-value=<FIXTURE_ROOT>',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation(`prefix${repository}`, roots, 'win32'),
+    `prefix${repository}`,
+  );
+});
+
+test('Git spike path tokens keep POSIX matching case-sensitive and do not treat backslashes as separators', () => {
+  const roots = {
+    fixtureRoot: '/var/tmp/trial/repository',
+    siblingRoot: '/var/tmp/trial/sibling',
+    trialRoot: '/var/tmp/trial',
+  };
+  assert.equal(
+    tokenizeGitSpikePathPresentation('/var/tmp/trial/repository/notes', roots, 'linux'),
+    '<FIXTURE_ROOT>/notes',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('/var/tmp/trial\\repository', roots, 'linux'),
+    '/var/tmp/trial\\repository',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('/var/tmp/trial/Repository', roots, 'linux'),
+    '<TRIAL_ROOT>/Repository',
+  );
+  assert.equal(
+    tokenizeGitSpikePathPresentation('/VAR/tmp/trial/repository', roots, 'linux'),
+    '/VAR/tmp/trial/repository',
+  );
+});
+
+test('Git spike snapshot: unmatched configuration bytes remain distinct in semantic hashes', () => {
+  withFixture('unmatched-config-bytes', (value) => {
+    runFixtureGit(value, ['config', '--local', 'oculory.unmatched-value', 'alpha\\beta']);
+    const backslash = captureGitSpikeSnapshot(value);
+    runFixtureGit(value, ['config', '--local', 'oculory.unmatched-value', 'alpha/beta']);
+    const slash = captureGitSpikeSnapshot(value);
+    assert.equal(configValue(backslash, 'oculory.unmatched-value'), 'alpha\\beta');
+    assert.equal(configValue(slash, 'oculory.unmatched-value'), 'alpha/beta');
+    assert.notEqual(backslash.rawEvidence.configSha256, slash.rawEvidence.configSha256);
+    assert.notEqual(backslash.layerHashes.isolation, slash.layerHashes.isolation);
+    assert.notEqual(backslash.stateHash, slash.stateHash);
+    assert.deepEqual(diffGitSpikeSnapshots(backslash, slash).changedLayers, ['isolation']);
+
+    runFixtureGit(value, ['config', '--local', 'oculory.unmatched-value', 'D:\\unknown\\repository']);
+    const nativeUnknown = captureGitSpikeSnapshot(value);
+    runFixtureGit(value, ['config', '--local', 'oculory.unmatched-value', 'D:/unknown/repository']);
+    const slashUnknown = captureGitSpikeSnapshot(value);
+    assert.equal(configValue(nativeUnknown, 'oculory.unmatched-value'), 'D:\\unknown\\repository');
+    assert.equal(configValue(slashUnknown, 'oculory.unmatched-value'), 'D:/unknown/repository');
+    assert.notEqual(nativeUnknown.rawEvidence.configSha256, slashUnknown.rawEvidence.configSha256);
+    assert.notEqual(nativeUnknown.layerHashes.isolation, slashUnknown.layerHashes.isolation);
+    assert.notEqual(nativeUnknown.stateHash, slashUnknown.stateHash);
+    assert.deepEqual(diffGitSpikeSnapshots(nativeUnknown, slashUnknown).changedLayers, ['isolation']);
+  });
+});
+
+test('Git spike snapshot diagnostics are deterministic, bounded, and redact absolute fixture roots', () => {
+  withFixture('diagnostic-output', (value) => {
+    const before = captureGitSpikeSnapshot(value);
+    runFixtureGit(value, ['config', '--local', 'oculory.path-one', value.trialRoot]);
+    runFixtureGit(value, ['config', '--local', 'oculory.path-two', value.repositoryRoot]);
+    runFixtureGit(value, ['config', '--local', 'oculory.path-three', value.siblingRepositoryRoot]);
+    const after = captureGitSpikeSnapshot(value);
+    const first = explainGitSpikeSnapshotDifference(before, after, {
+      beforeFixture: value,
+      afterFixture: value,
+      maxDifferencesPerLayer: 2,
+    });
+    const second = explainGitSpikeSnapshotDifference(before, after, {
+      beforeFixture: value,
+      afterFixture: value,
+      maxDifferencesPerLayer: 2,
+    });
+    const output = formatGitSpikeSnapshotDiagnostic(first);
+
+    assert.equal(output, formatGitSpikeSnapshotDiagnostic(second));
+    assert.deepEqual(first.differingLayers, ['isolation']);
+    assert.ok((first.layers[0]?.differenceCount ?? 0) >= 3);
+    assert.equal(first.layers[0]?.differences.length, 2);
+    assert.equal(first.layers[0]?.truncated, true);
+    assert.equal(output.includes(value.trialRoot), false);
+    assert.equal(output.includes(value.repositoryRoot), false);
+    assert.equal(output.includes(value.siblingRepositoryRoot), false);
   });
 });
 
@@ -79,7 +320,7 @@ test('Git spike fixture: isolation config, hooks, remotes, signing, and environm
     assert.equal(config.get('core.autocrlf'), 'false');
     assert.equal(config.get('core.fsmonitor'), 'false');
     assert.equal(config.get('core.filemode'), 'false');
-    assert.equal(config.get('core.hookspath'), '<TRIAL_ROOT>/runtime/hooks');
+    assert.equal(config.get('core.hookspath'), join('<TRIAL_ROOT>', 'runtime', 'hooks'));
     assert.deepEqual(snapshot.remotes, []);
     assert.deepEqual(snapshot.hooks, []);
     assert.deepEqual(snapshot.submodules, []);
@@ -133,6 +374,65 @@ test('Git spike snapshot: index and worktree can be checked independently agains
     snapshot = captureGitSpikeSnapshot(value);
     assert.equal(snapshotIndexMatchesCommit(snapshot, value.mainHead), true);
     assert.equal(snapshotWorktreeMatchesCommit(snapshot, value.mainHead), false);
+  });
+});
+
+test('Git spike snapshot: meaningful relative paths, file modes, configuration, and reflog actions remain semantic', () => {
+  withFixture('semantic-fields', (value) => {
+    const clean = captureGitSpikeSnapshot(value);
+
+    renameSync(
+      join(value.repositoryRoot, 'notes', 'plan.txt'),
+      join(value.repositoryRoot, 'notes', 'renamed.txt'),
+    );
+    const renamed = captureGitSpikeSnapshot(value);
+    assert.deepEqual(diffGitSpikeSnapshots(clean, renamed).changedLayers, ['worktree', 'status']);
+    const renamedDiagnostic = explainGitSpikeSnapshotDifference(clean, renamed, {
+      beforeFixture: value,
+      afterFixture: value,
+    });
+    assert.ok(renamedDiagnostic.layers.some((layer) =>
+      layer.differences.some((difference) => difference.pointer.endsWith('/path'))
+    ));
+    renameSync(
+      join(value.repositoryRoot, 'notes', 'renamed.txt'),
+      join(value.repositoryRoot, 'notes', 'plan.txt'),
+    );
+
+    if (process.platform !== 'win32') {
+      chmodSync(join(value.repositoryRoot, 'README.md'), 0o600);
+      const modeChanged = captureGitSpikeSnapshot(value);
+      assert.deepEqual(diffGitSpikeSnapshots(clean, modeChanged).changedLayers, ['worktree']);
+      const modeDiagnostic = explainGitSpikeSnapshotDifference(clean, modeChanged);
+      assert.ok(modeDiagnostic.layers.some((layer) =>
+        layer.differences.some((difference) => difference.indicators.mode)
+      ));
+      chmodSync(join(value.repositoryRoot, 'README.md'), 0o644);
+    }
+
+    runFixtureGit(value, ['config', '--local', 'oculory.semantic-probe', 'enabled']);
+    const configured = captureGitSpikeSnapshot(value);
+    assert.deepEqual(diffGitSpikeSnapshots(clean, configured).changedLayers, ['isolation']);
+    runFixtureGit(value, ['config', '--local', '--unset', 'oculory.semantic-probe']);
+
+    runFixtureGit(value, [
+      'update-ref',
+      '-m',
+      'semantic action: move main',
+      'refs/heads/main',
+      value.firstCommit,
+      value.mainHead,
+    ]);
+    runFixtureGit(value, [
+      'update-ref',
+      '-m',
+      'semantic action: restore main',
+      'refs/heads/main',
+      value.mainHead,
+      value.firstCommit,
+    ]);
+    const reflogChanged = captureGitSpikeSnapshot(value);
+    assert.deepEqual(diffGitSpikeSnapshots(clean, reflogChanged).changedLayers, ['reflogs']);
   });
 });
 
@@ -266,6 +566,17 @@ function withBase(body: (base: string) => void): void {
   }
 }
 
+function withIndependentBases(body: (firstBase: string, secondBase: string) => void): void {
+  const firstBase = mkdtempSync(join(tmpdir(), 'oculory-git-spike-first-'));
+  const secondBase = mkdtempSync(join(tmpdir(), 'oculory-git-spike-second-'));
+  try {
+    body(firstBase, secondBase);
+  } finally {
+    rmSync(firstBase, { recursive: true, force: true });
+    rmSync(secondBase, { recursive: true, force: true });
+  }
+}
+
 function fixture(base: string, name: string): GitSpikeFixture {
   return createGitSpikeFixture({
     baseDirectory: base,
@@ -307,11 +618,23 @@ function fakeDiff(changedLayers: GitSpikeSnapshotDiff['changedLayers']): GitSpik
   };
 }
 
+function configValue(
+  snapshot: ReturnType<typeof captureGitSpikeSnapshot>,
+  key: string,
+): string | undefined {
+  return snapshot.config.find((entry) => entry.key === key)?.value;
+}
+
 function findExecutable(name: string): string {
+  const extensions = process.platform === 'win32'
+    ? ['', ...(process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';')]
+    : [''];
   for (const directory of (process.env.PATH ?? '').split(delimiter)) {
     if (directory.length === 0) continue;
-    const candidate = join(directory, name);
-    if (existsSync(candidate)) return resolve(candidate);
+    for (const extension of extensions) {
+      const candidate = join(directory, `${name}${extension}`);
+      if (existsSync(candidate)) return resolve(candidate);
+    }
   }
   throw new Error(`${name} was not found on PATH`);
 }

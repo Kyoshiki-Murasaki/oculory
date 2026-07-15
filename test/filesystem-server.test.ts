@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { relative } from 'node:path';
 import { FsServer, fsSnapshot, resolveInside } from '../src/examples/filesystem/server.js';
@@ -62,26 +63,36 @@ test('fs-server: under path_traversal_allowed, resolveInside clamps EVERY input 
 
 test('fs-server: fsSnapshot never follows a symlink out of the sandbox (no external content)', () => {
   const root = createSandbox();
+  const outside = mkdtempSync(join(tmpdir(), 'oculory-fs-outside-'));
   try {
-    symlinkSync('/etc/hosts', join(root, 'linked-hosts'));
+    const outsideFile = join(outside, 'external.txt');
+    writeFileSync(outsideFile, 'external content must not be captured\n', 'utf8');
+    symlinkSync(outsideFile, join(root, 'linked-external'), 'file');
     const rows = fsSnapshot(root).rows as { path: string; type: string; content?: string }[];
-    const link = rows.find((r) => r.path === 'linked-hosts');
+    const link = rows.find((r) => r.path === 'linked-external');
     assert.ok(link, 'symlink appears in the snapshot');
     assert.equal(link!.type, 'symlink', 'recorded as a symlink, not a file');
     assert.equal(link!.content, undefined, 'no external file content is read into the snapshot');
   } finally {
     destroySandbox(root);
+    rmSync(outside, { recursive: true, force: true });
   }
 });
 
 test('fs-server: rejects a symlink that escapes the sandbox', () => {
-  withSandbox((root, server) => {
-    // A symlink INSIDE the sandbox pointing OUTSIDE it must not be followed.
-    symlinkSync('/etc', join(root, 'escape-link'));
-    const r = server.callTool('read_file', { path: 'escape-link/hosts' });
-    assert.equal(r.status, 'error');
-    assert.equal(r.error_code, 'PATH_TRAVERSAL');
-  });
+  const outside = mkdtempSync(join(tmpdir(), 'oculory-fs-outside-'));
+  try {
+    writeFileSync(join(outside, 'external.txt'), 'external content must not be read\n', 'utf8');
+    withSandbox((root, server) => {
+      // A symlink INSIDE the sandbox pointing OUTSIDE it must not be followed.
+      symlinkSync(outside, join(root, 'escape-link'), process.platform === 'win32' ? 'junction' : 'dir');
+      const r = server.callTool('read_file', { path: 'escape-link/external.txt' });
+      assert.equal(r.status, 'error');
+      assert.equal(r.error_code, 'PATH_TRAVERSAL');
+    });
+  } finally {
+    rmSync(outside, { recursive: true, force: true });
+  }
 });
 
 test('fs-server: missing file yields a structured NOT_FOUND, state unchanged', () => {
