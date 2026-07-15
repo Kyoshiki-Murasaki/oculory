@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, realpathSync } from 'node:fs';
-import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { basename, delimiter, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import type { JsonObject } from '../../schema/types.js';
 import type { McpStdioClientOptions } from '../../mcp/client/types.js';
 
@@ -165,14 +165,15 @@ export function inspectGitSpikeRuntime(config: GitSpikeRuntimeConfig): GitSpikeR
   if (pythonBin !== targetBin) {
     throw new Error('target executable and Python executable must come from the same disposable environment');
   }
-  if (targetExecutable.split(sep).at(-1) !== 'mcp-server-git') {
+  const targetName = basename(targetExecutable).toLowerCase();
+  if (targetName !== 'mcp-server-git' && targetName !== 'mcp-server-git.exe') {
     throw new Error(`unexpected target executable name: ${targetExecutable}`);
   }
 
   const raw = execFileSync(pythonExecutable, ['-c', INSPECTION_SCRIPT], {
     encoding: 'utf8',
     env: {
-      PATH: [pythonBin, dirname(gitExecutable), '/usr/bin', '/bin'].join(':'),
+      PATH: uniquePath([pythonBin, dirname(gitExecutable), ...systemExecutableDirectories()]),
       PYTHONNOUSERSITE: '1',
       PYTHONSAFEPATH: '1',
       PYTHONDONTWRITEBYTECODE: '1',
@@ -226,7 +227,7 @@ export function inspectGitSpikeRuntime(config: GitSpikeRuntimeConfig): GitSpikeR
 
   const gitVersion = execFileSync(gitExecutable, ['--version'], {
     encoding: 'utf8',
-    env: { PATH: [dirname(gitExecutable), '/usr/bin', '/bin'].join(':'), LC_ALL: 'C' },
+    env: { PATH: uniquePath([dirname(gitExecutable), ...systemExecutableDirectories()]), LC_ALL: 'C' },
     maxBuffer: 64 * 1024,
     timeout: 5_000,
   }).trim();
@@ -272,7 +273,7 @@ export function buildGitSpikeChildEnvironment(
   }
 
   const env = Object.freeze({
-    PATH: uniquePath([dirname(runtime.targetExecutable), dirname(runtime.gitExecutable), '/usr/bin', '/bin']),
+    PATH: uniquePath([dirname(runtime.targetExecutable), dirname(runtime.gitExecutable), ...systemExecutableDirectories()]),
     HOME: paths.home,
     XDG_CONFIG_HOME: paths.xdgConfigHome,
     XDG_CACHE_HOME: paths.xdgCacheHome,
@@ -381,5 +382,9 @@ function assertPathWithin(path: string, root: string, label: string): void {
 }
 
 function uniquePath(entries: readonly string[]): string {
-  return [...new Set(entries)].join(':');
+  return [...new Set(entries.filter((entry) => entry.length > 0))].join(delimiter);
+}
+
+function systemExecutableDirectories(): string[] {
+  return process.platform === 'win32' ? [] : ['/usr/bin', '/bin'];
 }

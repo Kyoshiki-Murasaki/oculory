@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { canonicalJson, sha256 } from '../../schema/canonical.js';
 import type { JsonObject } from '../../schema/types.js';
 import {
@@ -158,7 +158,7 @@ export function createGitSpikeFixture(options: CreateGitSpikeFixtureOptions): Gi
   const xdgCacheHome = join(runtimeRoot, 'xdg-cache');
   const temporaryDirectory = join(runtimeRoot, 'tmp');
   const globalGitConfig = join(runtimeRoot, 'global.gitconfig');
-  const askpassExecutable = join(runtimeRoot, 'git-askpass');
+  const askpassExecutable = join(runtimeRoot, process.platform === 'win32' ? 'git-askpass.cmd' : 'git-askpass');
 
   for (const directory of [
     runtimeRoot,
@@ -172,7 +172,11 @@ export function createGitSpikeFixture(options: CreateGitSpikeFixtureOptions): Gi
     mkdirSync(directory, { recursive: true, mode: 0o700 });
   }
   writeFileSync(globalGitConfig, '', { encoding: 'utf8', mode: 0o600, flag: 'wx' });
-  writeFileSync(askpassExecutable, '#!/bin/sh\nexit 1\n', { encoding: 'utf8', mode: 0o700, flag: 'wx' });
+  writeFileSync(
+    askpassExecutable,
+    process.platform === 'win32' ? '@exit /b 1\r\n' : '#!/bin/sh\nexit 1\n',
+    { encoding: 'utf8', mode: 0o700, flag: 'wx' },
+  );
   chmodSync(askpassExecutable, 0o700);
 
   const environmentPaths: GitSpikeEnvironmentPaths = {
@@ -508,7 +512,10 @@ function buildFixtureGitEnvironment(
   paths: GitSpikeEnvironmentPaths,
 ): Readonly<Record<string, string>> {
   const env = Object.freeze({
-    PATH: [...new Set([dirname(gitExecutable), '/usr/bin', '/bin'])].join(':'),
+    PATH: [...new Set([
+      dirname(gitExecutable),
+      ...(process.platform === 'win32' ? [] : ['/usr/bin', '/bin']),
+    ])].join(delimiter),
     HOME: paths.home,
     XDG_CONFIG_HOME: paths.xdgConfigHome,
     XDG_CACHE_HOME: paths.xdgCacheHome,

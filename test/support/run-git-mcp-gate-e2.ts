@@ -35,6 +35,7 @@ import {
   validateGitGateE2MutationRegistry, type GitGateE2MutationEntry, type GitGateE2MutationRegistry,
 } from '../../src/targets/git/gate-e2-registry.js';
 import { gitGateE2TargetWrapperBundle } from '../../src/targets/git/gate-e2-wrappers.js';
+import { gitGateE2AdapterScenario } from '../../src/targets/git/gate-e2-adapter-mutations.js';
 import { verifyGitEvidence } from '../../src/targets/git/verifier.js';
 import { GIT_VERIFIER_VERSION } from '../../src/targets/git/verifier-types.js';
 import { GIT_MINER_VERSION } from '../../src/targets/git/mining.js';
@@ -276,7 +277,7 @@ async function runAdapterTrial(options: {
   if (entry.id === 'adapter/stale-tools-cache' || entry.id === 'adapter/drop-rpc-code' || entry.id === 'adapter/swallow-transport-failure') {
     return runAdapterTransportFixture(entry, trial);
   }
-  const scenario = adapterScenario(entry.id);
+  const scenario = gitGateE2AdapterScenario(entry.id);
   const result = await executeGitScriptedScenario({ baseDirectory: options.work, trialId: `ma-${safeId(entry.id)}-${trial}`, runtime: options.runtime, scenario });
   let evaluated = result;
   if (entry.id === 'adapter/ignore-is-error' || entry.id === 'adapter/wrong-result-normalization') evaluated = normalizeErrorAsSuccess(result);
@@ -422,27 +423,6 @@ function targetScenario(id: string): GitGateE1Scenario {
     scenario.expectedCallCardinality = { minTotal: 1, maxTotal: 1, perToolMax: { git_status: 1 } };
   }
   return scenario;
-}
-
-function adapterScenario(id: string): GitGateE1Scenario {
-  if (id === 'adapter/files-array-stringified') {
-    const scenario = structuredClone(gitGateE1Scenario('git-stage-h1'));
-    scenario.scriptedCalls = scenario.scriptedCalls.map((call) => call.tool === 'git_add' ? { ...call, arguments: { files: 'docs/release.md' } } : call);
-    return scenario;
-  }
-  if (id === 'adapter/wrong-repo-path') {
-    const scenario = structuredClone(gitGateE1Scenario('git-stage-m1'));
-    scenario.scriptedCalls = scenario.scriptedCalls.map((call) => ({ ...call, arguments: { ...call.arguments, repo_path: '@sibling_root' }, reviewedNonFixtureRepositoryPath: true, reviewedBoundaryReason: 'nonfixture_repo_path_probe' as const }));
-    return scenario;
-  }
-  if (id === 'adapter/duplicate-call') {
-    const scenario = structuredClone(gitGateE1Scenario('git-stage-m2'));
-    scenario.scriptedCalls = [...scenario.scriptedCalls, structuredClone(scenario.scriptedCalls[0]!)];
-    return scenario;
-  }
-  if (id === 'adapter/ignore-is-error') return structuredClone(gitGateE1Scenario('git-missing-revision-a1'));
-  if (id === 'adapter/wrong-result-normalization') return structuredClone(gitGateE1Scenario('git-existing-branch-a1'));
-  throw new Error(`unhandled adapter scenario ${id}`);
 }
 
 function normalizeErrorAsSuccess(result: GitScriptedScenarioResult): GitScriptedScenarioResult {

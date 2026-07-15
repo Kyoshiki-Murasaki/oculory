@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oculory.invalid/schemas/oculory-pilot-report-v1.json",
+  "title": "Oculory provider-free offline pilot report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "reportToken",
+    "overallResult",
+    "oculory",
+    "system",
+    "tracks",
+    "stages",
+    "metrics",
+    "cleanup",
+    "providerAccounting",
+    "privacy",
+    "participantFeedback",
+    "limitations"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "oculory-pilot-report-v1" },
+    "reportToken": { "type": "string", "pattern": "^[a-f0-9]{24}$" },
+    "overallResult": { "enum": ["passed", "failed", "cancelled"] },
+    "oculory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "commit", "worktreeState"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "worktreeState": { "enum": ["clean", "modified"] }
+      }
+    },
+    "system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["osFamily", "nodeVersion", "npmVersion", "gitVersion"],
+      "properties": {
+        "osFamily": { "enum": ["linux", "macos", "windows"] },
+        "nodeVersion": { "type": "string", "minLength": 1 },
+        "npmVersion": { "type": "string", "minLength": 1 },
+        "gitVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "tracks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["guidedTrackA", "readinessTrackB"],
+      "properties": {
+        "guidedTrackA": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "properties": { "status": { "enum": ["completed", "failed", "cancelled"] } }
+        },
+        "readinessTrackB": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "automaticIntegrationGenerated"],
+          "properties": {
+            "status": { "const": "not_run" },
+            "automaticIntegrationGenerated": { "const": false }
+          }
+        }
+      }
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "startedAt", "endedAt", "durationMs", "error"],
+        "properties": {
+          "id": { "enum": ["install_check", "deterministic_session", "evidence_inspection", "candidate_review", "suite_compilation", "suite_replay", "controlled_regression", "cleanup", "report_export"] },
+          "status": { "enum": ["passed", "failed", "cancelled", "skipped"] },
+          "startedAt": { "type": "string", "format": "date-time" },
+          "endedAt": { "type": "string", "format": "date-time" },
+          "durationMs": { "type": "integer", "minimum": 0 },
+          "error": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["category", "message"],
+                "properties": {
+                  "category": { "type": "string", "minLength": 1 },
+                  "message": { "type": "string", "minLength": 1, "maxLength": 400 }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["targetSessions", "mockProviderSessions", "mockProviderTurns", "mcpToolCalls", "toolCatalogueSize", "candidates", "suite", "replay", "controlledRegression"],
+      "properties": {
+        "targetSessions": { "type": "integer", "minimum": 0 },
+        "mockProviderSessions": { "type": "integer", "minimum": 0 },
+        "mockProviderTurns": { "type": "integer", "minimum": 0 },
+        "mcpToolCalls": { "type": "integer", "minimum": 0 },
+        "toolCatalogueSize": { "type": "integer", "minimum": 0 },
+        "candidates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["total", "byRisk", "approved", "rejected"],
+          "properties": {
+            "total": { "type": "integer", "minimum": 0 },
+            "approved": { "type": "integer", "minimum": 0 },
+            "rejected": { "type": "integer", "minimum": 0 },
+            "byRisk": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["low", "medium", "high"],
+              "properties": {
+                "low": { "type": "integer", "minimum": 0 },
+                "medium": { "type": "integer", "minimum": 0 },
+                "high": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        },
+        "suite": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["compiled", "schemaVersion", "candidateCount", "digest"],
+          "properties": {
+            "compiled": { "type": "boolean" },
+            "schemaVersion": { "type": "string", "minLength": 1 },
+            "candidateCount": { "type": "integer", "minimum": 0 },
+            "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        },
+        "replay": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sessions", "passed", "suitePassed"],
+          "properties": {
+            "sessions": { "type": "integer", "minimum": 0 },
+            "passed": { "type": "integer", "minimum": 0 },
+            "suitePassed": { "type": "boolean" }
+          }
+        },
+        "controlledRegression": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mutationId", "detected", "suiteDetected", "independentVerifierDetected"],
+          "properties": {
+            "mutationId": { "type": "string", "minLength": 1 },
+            "detected": { "type": "boolean" },
+            "suiteDetected": { "type": "boolean" },
+            "independentVerifierDetected": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allChildProcessesExited", "allFixtureRootsRemoved", "workingDirectoryRemoved", "emergencyCleanupUsed", "rawArtifactsLocalOnly"],
+      "properties": {
+        "allChildProcessesExited": { "type": "boolean" },
+        "allFixtureRootsRemoved": { "type": "boolean" },
+        "workingDirectoryRemoved": { "type": "boolean" },
+        "emergencyCleanupUsed": { "type": "boolean" },
+        "rawArtifactsLocalOnly": { "const": true }
+      }
+    },
+    "providerAccounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["providerCalls", "providerNetworkCalls", "providerCredentialsRead", "providerCostMicros", "mockProviderTurns"],
+      "properties": {
+        "providerCalls": { "const": 0 },
+        "providerNetworkCalls": { "const": 0 },
+        "providerCredentialsRead": { "const": 0 },
+        "providerCostMicros": { "const": 0 },
+        "mockProviderTurns": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["telemetryEnabled", "automaticUpload", "privatePathsIncluded", "rawTranscriptsIncluded", "rawToolPayloadsIncluded", "rawEnvironmentIncluded", "participantIdentityIncluded", "credentialsIncluded", "protectedEvidenceIncluded", "manualReviewRequiredBeforeSharing"],
+      "properties": {
+        "telemetryEnabled": { "const": false },
+        "automaticUpload": { "const": false },
+        "privatePathsIncluded": { "const": false },
+        "rawTranscriptsIncluded": { "const": false },
+        "rawToolPayloadsIncluded": { "const": false },
+        "rawEnvironmentIncluded": { "const": false },
+        "participantIdentityIncluded": { "const": false },
+        "credentialsIncluded": { "const": false },
+        "protectedEvidenceIncluded": { "const": false },
+        "manualReviewRequiredBeforeSharing": { "const": true }
+      }
+    },
+    "participantFeedback": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["commentsReviewed", "ratings", "binaryAnswers", "comments"],
+          "properties": {
+            "commentsReviewed": { "const": true },
+            "ratings": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 5 } },
+            "binaryAnswers": { "type": "object", "additionalProperties": { "type": "boolean" } },
+            "comments": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 500 } }
+          }
+        }
+      ]
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": { "type": "string", "minLength": 1, "maxLength": 300 }
+    }
+  }
+}
