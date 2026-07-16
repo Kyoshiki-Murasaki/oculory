@@ -70,6 +70,26 @@ function validReport(): PilotReport {
   };
 }
 
+function failedReport(): PilotReport {
+  const report = validReport();
+  report.overallResult = 'failed';
+  report.tracks.guidedTrackA.status = 'failed';
+  report.stages[0]!.status = 'failed';
+  report.stages[0]!.error = { category: 'synthetic_failure', message: 'Synthetic bounded failure.' };
+  return report;
+}
+
+function reportWithParticipantFeedback(): PilotReport {
+  const report = validReport();
+  report.participantFeedback = {
+    commentsReviewed: true,
+    ratings: { usefulness: 5 },
+    binaryAnswers: { completedWithoutHelp: true },
+    comments: ['The synthetic workflow was clear.'],
+  };
+  return report;
+}
+
 test('pilot report schema accepts a complete sanitized provider-free report', () => {
   assert.doesNotThrow(() => validatePilotReport(validReport()));
 });
@@ -137,4 +157,182 @@ test('pilot report rejects credential-shaped values', () => {
   const report = validReport();
   report.limitations = [`synthetic sk-${'a'.repeat(32)}`];
   assert.throws(() => validatePilotReport(report), /credential-shaped/);
+});
+
+test('pilot report rejects private absolute path spelling variants after comparison-only normalization', () => {
+  const jsonDecodedBackslashPath = JSON.parse('"C:\\\\Users\\\\example\\\\private-repository"') as string;
+  const prohibited = [
+    ['POSIX Users root', '/Users/example/private-repository'],
+    ['POSIX home root', '/home/example/private-repository'],
+    ['POSIX private root', '/private/example/private-repository'],
+    ['POSIX temporary root', '/tmp/example/private-repository'],
+    ['POSIX macOS temporary root', '/var/folders/example/private-repository'],
+    ['Windows backslashes', String.raw`C:\Users\example\private-repository`],
+    ['Windows forward slashes', 'C:/Users/example/private-repository'],
+    ['Windows mixed separators from backslash', String.raw`C:\Users/example/private-repository`],
+    ['Windows mixed separators from slash', String.raw`C:/Users\example/private-repository`],
+    ['Windows lowercase private root', 'c:/users/example/private-repository'],
+    ['Windows legacy home root', String.raw`D:\Documents and Settings\example\private-repository`],
+    ['Windows home root', 'E:/home/example/private-repository'],
+    ['embedded after ordinary text', 'Observed C:/Users/example/private-repository'],
+    ['followed by ordinary text', 'C:/Users/example/private-repository was excluded'],
+    ['second line of multiline text', 'line one\nC:/Users/example/private-repository\nline three'],
+    ['JSON-decoded escaped backslashes', jsonDecodedBackslashPath],
+    ['fullwidth slash', 'C:／Users／example／private-repository'],
+    ['fullwidth colon and Latin characters', 'Ｃ：／Ｕｓｅｒｓ／ｅｘａｍｐｌｅ／private-repository'],
+    ['fullwidth reverse solidus', 'C:＼Users＼example＼private-repository'],
+    ['division slash', 'C:∕Users∕example∕private-repository'],
+    ['fraction slash', 'C:⁄Users⁄example⁄private-repository'],
+    ['UNC backslashes', String.raw`\\server\share\private`],
+    ['UNC forward slashes', '//server/share/private'],
+    ['UNC mixed separators from backslash', String.raw`\\server/share\private`],
+    ['UNC mixed separators from slash', String.raw`//server\share/private`],
+    ['private POSIX file URL', 'file:///Users/example/private-repository'],
+    ['uppercase-scheme private POSIX file URL', 'FILE:///Users/example/private-repository'],
+    ['private Windows file URL', 'file:///C:/Users/example/private-repository'],
+    ['UNC file URL', 'file://server/share/private'],
+  ] as const;
+
+  for (const [label, value] of prohibited) {
+    const report = validReport();
+    report.limitations = [value];
+    assert.throws(() => validatePilotReport(report), /absolute private path/, label);
+  }
+});
+
+test('pilot report inspects every retained free-text value and participant-defined key', () => {
+  const privatePath = 'C:/Users/example/private-repository';
+  const cases: Array<[string, () => PilotReport]> = [
+    ['oculory version', () => {
+      const report = validReport();
+      report.oculory.version = privatePath;
+      return report;
+    }],
+    ['Node version', () => {
+      const report = validReport();
+      report.system.nodeVersion = privatePath;
+      return report;
+    }],
+    ['npm version', () => {
+      const report = validReport();
+      report.system.npmVersion = privatePath;
+      return report;
+    }],
+    ['Git version', () => {
+      const report = validReport();
+      report.system.gitVersion = privatePath;
+      return report;
+    }],
+    ['stage error category', () => {
+      const report = failedReport();
+      report.stages[0]!.error!.category = privatePath;
+      return report;
+    }],
+    ['stage error message', () => {
+      const report = failedReport();
+      report.stages[0]!.error!.message = privatePath;
+      return report;
+    }],
+    ['controlled regression mutation ID', () => {
+      const report = validReport();
+      report.metrics.controlledRegression.mutationId = privatePath;
+      return report;
+    }],
+    ['suite schema version', () => {
+      const report = validReport();
+      report.metrics.suite.schemaVersion = privatePath;
+      return report;
+    }],
+    ['limitation', () => {
+      const report = validReport();
+      report.limitations = [privatePath];
+      return report;
+    }],
+    ['participant comment', () => {
+      const report = reportWithParticipantFeedback();
+      report.participantFeedback!.comments = [privatePath];
+      return report;
+    }],
+    ['participant rating key', () => {
+      const report = reportWithParticipantFeedback();
+      report.participantFeedback!.ratings = { [privatePath]: 5 };
+      return report;
+    }],
+    ['participant binary-answer key', () => {
+      const report = reportWithParticipantFeedback();
+      report.participantFeedback!.binaryAnswers = { [privatePath]: true };
+      return report;
+    }],
+  ];
+
+  for (const [label, createReport] of cases) {
+    assert.throws(() => validatePilotReport(createReport()), /absolute private path/, label);
+  }
+});
+
+test('pilot report private-path errors identify the field without repeating sensitive content', () => {
+  const privatePath = 'C:/Users/example/private-repository';
+  const report = validReport();
+  report.limitations = [privatePath];
+  assert.throws(
+    () => validatePilotReport(report),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /\$\.limitations\[0\]/);
+      assert.doesNotMatch(error.message, /C:\/Users/);
+      return true;
+    },
+  );
+
+  const keyed = reportWithParticipantFeedback();
+  keyed.participantFeedback!.ratings = { [privatePath]: 5 };
+  assert.throws(
+    () => validatePilotReport(keyed),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /\$\.participantFeedback\.ratings key/);
+      assert.doesNotMatch(error.message, /C:\/Users/);
+      return true;
+    },
+  );
+});
+
+test('pilot report validation never mutates compatibility-obfuscated report text', () => {
+  const original = 'Ｃ：／Ｕｓｅｒｓ／ｅｘａｍｐｌｅ／private-repository';
+  const report = validReport();
+  report.limitations = [original];
+  assert.throws(() => validatePilotReport(report), /absolute private path/);
+  assert.equal(report.limitations[0], original);
+});
+
+test('pilot report continues to allow legitimate slash, backslash, colon, URL, and Unicode text', () => {
+  const allowed = [
+    'docs/README.md',
+    String.raw`src\module.ts`,
+    'alpha/beta',
+    String.raw`alpha\beta`,
+    'adapter/files-array-stringified',
+    'git-external-suite-v1',
+    'https://example.com/path',
+    'file-format://example',
+    'file:///docs/README.md',
+    'Windows users completed the workflow.',
+    'C:relative',
+    'C:/Windows/System32',
+    '/usr/local/bin',
+    'Ordinary Unicode: नमस्ते 世界 résumé.',
+    'Café'.normalize('NFC'),
+    'Café'.normalize('NFD'),
+  ];
+
+  for (const value of allowed) {
+    const report = validReport();
+    report.limitations = [value];
+    assert.doesNotThrow(() => validatePilotReport(report), value);
+  }
+
+  const feedback = reportWithParticipantFeedback();
+  feedback.participantFeedback!.ratings = { 'docs/README.md': 5 };
+  feedback.participantFeedback!.binaryAnswers = { 'Windows users': true };
+  assert.doesNotThrow(() => validatePilotReport(feedback));
 });

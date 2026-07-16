@@ -268,6 +268,34 @@ function validateParticipantFeedback(value: unknown): void {
   array(feedback.comments, '$.participantFeedback.comments').forEach((entry, index) => bounded(entry, `$.participantFeedback.comments[${index}]`, 500));
 }
 
+function containsPrivateAbsolutePath(value: string): boolean {
+  const comparison = value
+    .normalize('NFKC')
+    .replace(/[\u2044\u2215]/gu, '/')
+    .replace(/\\/gu, '/');
+
+  const privatePosixPath = /(?:^|[\s`"'([{<,;=:])\/(?:Users|home|private|tmp|var\/folders)\//;
+  const privateWindowsPath = /(?:^|[\s`"'([{<,;=:])[A-Za-z]:\/(?:users|documents and settings|home)\//i;
+  const uncPath = /(?:^|[\s`"'([{<,;=])\/\/[^/\s]+\/[^/\s]+(?:\/|$)/;
+  const privatePosixFileUrl = /(?:^|[\s`"'([{<,;=])[Ff][Ii][Ll][Ee]:\/\/\/(?:Users|home|private|tmp|var\/folders)\//;
+  const privateWindowsFileUrl = /(?:^|[\s`"'([{<,;=])file:\/\/\/[A-Za-z]:\/(?:users|documents and settings|home)\//i;
+  const uncFileUrl = /(?:^|[\s`"'([{<,;=])file:\/\/[^/\s]+\/[^/\s]+(?:\/|$)/i;
+
+  return privatePosixPath.test(comparison)
+    || privateWindowsPath.test(comparison)
+    || uncPath.test(comparison)
+    || privatePosixFileUrl.test(comparison)
+    || privateWindowsFileUrl.test(comparison)
+    || uncFileUrl.test(comparison);
+}
+
+function rejectSensitiveString(value: string, path: string): void {
+  if (containsPrivateAbsolutePath(value)) fail(path, 'absolute private path is forbidden');
+  if (/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|\b(?:sk-ant-|sk-|gh[pousr]_)[A-Za-z0-9_-]{20,}\b/.test(value)) fail(path, 'credential-shaped value is forbidden');
+  if (/\b(?:OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_API_KEY|AZURE_OPENAI_API_KEY|PATH|HOME)=/.test(value)) fail(path, 'raw environment value is forbidden');
+  if (/"(?:jsonrpc|method|params|result)"\s*:|tools\/call/.test(value)) fail(path, 'raw transcript or tool payload content is forbidden');
+}
+
 function rejectSensitiveContent(report: Record<string, unknown>): void {
   const forbiddenKeys = new Set([
     'username', 'email', 'ipAddress', 'homeDirectory', 'repositoryPath', 'environment',
@@ -276,10 +304,7 @@ function rejectSensitiveContent(report: Record<string, unknown>): void {
   ]);
   const visit = (value: unknown, path: string): void => {
     if (typeof value === 'string') {
-      if (/(?:^|[\s`"'(])(?:\/Users\/|\/home\/|\/private\/|\/tmp\/|\/var\/folders\/|[A-Za-z]:\\Users\\|\\\\[^\\\s]+\\)/.test(value)) fail(path, 'absolute private path is forbidden');
-      if (/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|\b(?:sk-ant-|sk-|gh[pousr]_)[A-Za-z0-9_-]{20,}\b/.test(value)) fail(path, 'credential-shaped value is forbidden');
-      if (/\b(?:OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_API_KEY|AZURE_OPENAI_API_KEY|PATH|HOME)=/.test(value)) fail(path, 'raw environment value is forbidden');
-      if (/"(?:jsonrpc|method|params|result)"\s*:|tools\/call/.test(value)) fail(path, 'raw transcript or tool payload content is forbidden');
+      rejectSensitiveString(value, path);
       return;
     }
     if (Array.isArray(value)) {
@@ -288,6 +313,7 @@ function rejectSensitiveContent(report: Record<string, unknown>): void {
     }
     if (value !== null && typeof value === 'object') {
       for (const [key, entry] of Object.entries(value)) {
+        rejectSensitiveString(key, `${path} key`);
         if (forbiddenKeys.has(key)) fail(`${path}.${key}`, 'forbidden sensitive field');
         visit(entry, `${path}.${key}`);
       }
