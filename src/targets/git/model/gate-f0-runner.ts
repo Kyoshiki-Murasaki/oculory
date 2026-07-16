@@ -7,7 +7,7 @@ import type { Json, JsonObject } from '../../../schema/types.js';
 import { hashJson } from '../../../schema/canonical.js';
 import { GIT_SPIKE_TARGET, inspectGitSpikeRuntime } from '../../git-spike/config.js';
 import { GIT_GATE_E1_CATALOGUE_DIGEST, gitGateE1Scenario, type GitGateE1Scenario } from '../catalogue.js';
-import { executeGitScriptedScenario, type GitScriptedScenarioResult } from '../scripted-driver.js';
+import { executeGitScriptedScenario } from '../scripted-driver.js';
 import { GIT_VERIFIER_VERSION } from '../verifier-types.js';
 import { evaluateGitCompiledSuite, validateGitCompiledSuite, type GitCompiledSuiteV1 } from '../gate-e2.js';
 import { validateAuthorizationShape, authorizationDigest, type GateFAuthorization } from '../../../model/authorization.js';
@@ -16,16 +16,16 @@ import { ModelEvidenceStore } from '../../../model/evidence.js';
 import { ModelExecutionError, classifyModelError } from '../../../model/errors.js';
 import { executeRegisteredFault, GATE_F0_FAULTS } from '../../../model/faults.js';
 import { createPromptManifest, createScenarioManifest, GATE_F0_SCENARIO_IDS, validatePromptManifest, validateScenarioManifest } from '../../../model/manifests.js';
-import { DeterministicMockProvider, trajectoryForScenario } from '../../../model/mock-provider.js';
-import { F0ProviderRegistry, MOCK_MODEL_IDENTITY, MOCK_MODEL_SNAPSHOT, MOCK_PROVIDER_IDENTITY, validateProviderResponse } from '../../../model/provider.js';
-import { assertSecretFree, forbiddenChildEnvironmentNames } from '../../../model/redaction.js';
+import { trajectoryForScenario } from '../../../model/mock-provider.js';
+import { MOCK_MODEL_IDENTITY, MOCK_MODEL_SNAPSHOT, MOCK_PROVIDER_IDENTITY } from '../../../model/provider.js';
+import { forbiddenChildEnvironmentNames } from '../../../model/redaction.js';
 import { ModelSessionStateMachine } from '../../../model/runner.js';
 import {
-  GATE_F0_REPORT_VERSION, GATE_F_EVIDENCE_VERSION, MODEL_PROTOCOL_VERSION,
-  MODEL_RUN_SCHEMA_VERSION, MODEL_SESSION_SCHEMA_VERSION, PROVIDER_ADAPTER_VERSION,
-  type GateFCapPolicy, type ModelMessage, type ModelTerminalRecord, type ModelToolDefinition, type ProviderRequest, type ProviderResponse,
+  GATE_F0_REPORT_VERSION, GATE_F_EVIDENCE_VERSION,
+  MODEL_RUN_SCHEMA_VERSION, MODEL_SESSION_SCHEMA_VERSION,
+  type GateFCapPolicy, type ModelTerminalRecord,
 } from '../../../model/types.js';
-import { executeGitModelCalls } from './tool-bridge.js';
+import { executeDeterministicMockGitTurns } from './offline-session.js';
 
 const TOOL_SCHEMA_DIGEST = 'fdcbe98d820cf91b2815c2d232545dd463d3633abe3ba8aee46116b576afc62d';
 const SUITE_PATH = 'suites/external/git/git-suite-v1.json';
@@ -162,52 +162,20 @@ async function runSession(options: {
   const { scenario } = options;
   const machine = new ModelSessionStateMachine();
   for (const phase of ['preflight', 'authorization_validation', 'source_provenance', 'scenario_loading', 'fixture_creation', 'initial_snapshot', 'target_startup', 'protocol_initialize', 'tool_discovery', 'prompt_assembly'] as const) machine.transition(phase, 'precondition satisfied');
-  const trajectory = trajectoryForScenario(scenario.id, scenario.scriptedCalls);
-  const provider = new DeterministicMockProvider(trajectory);
-  const registry = new F0ProviderRegistry(provider);
-  const selected = registry.select('mock');
-  const messages: ModelMessage[] = [{ role: 'system', content: createPromptManifest(TOOL_SCHEMA_DIGEST, options.scenarioDigest).systemPrompt }, { role: 'user', content: scenario.intent }];
-  const requests: ProviderRequest[] = [];
-  const responses: ProviderResponse[] = [];
-  let result: GitScriptedScenarioResult | null = null;
-  let sessionCalls = 0;
-  for (let turnIndex = 0; turnIndex < trajectory.turns.length; turnIndex += 1) {
-    machine.transition('provider_request', `mock turn ${turnIndex}`);
-    options.caps.checkWorstCaseNextRequest(4_000, 2_000, 8_000, 0);
-    options.caps.recordAttempt(false);
-    const request: ProviderRequest = {
-      protocolVersion: MODEL_PROTOCOL_VERSION, requestId: `${scenario.id}-request-${turnIndex + 1}`,
-      sessionId: scenario.id, turnIndex, providerAdapterVersion: PROVIDER_ADAPTER_VERSION,
-      providerIdentity: MOCK_PROVIDER_IDENTITY, modelIdentity: MOCK_MODEL_IDENTITY, modelSnapshot: MOCK_MODEL_SNAPSHOT,
-      promptManifestDigest: options.promptDigest, scenarioManifestDigest: options.scenarioDigest,
-      authorizationDigest: options.authorizationDigest, systemInstructions: messages[0]!.content,
-      scenarioInstructions: scenario.intent, messages: structuredClone(messages),
-      availableTools: toolDefinitions(options.exactSchemas, new Set(scenario.allowedAlternatives.flat())), exactMcpToolSchemas: structuredClone(options.exactSchemas),
-      allowedToolNames: [...new Set(scenario.allowedAlternatives.flat())], maximumOutputTokens: 2_000,
-      temperature: 0, seed: 0, reasoningControl: null, metadata: { scenarioId: scenario.id }, timeoutMs: 30_000,
-      retryPolicy: { maximumRetries: 0, attemptIndex: 0 }, tracingPolicy: { retainRawResponse: true, redactSecrets: true },
-    };
-    assertSecretFree(request, 'provider request');
-    requests.push(request);
-    const response = validateProviderResponse(request, await selected.execute(request));
-    responses.push(response);
-    options.caps.accountUsage(response.responseDigest, response.usage);
-    machine.transition('provider_response_validation', 'response correlated and validated');
-    if (response.orderedToolCalls.length === 0) {
-      machine.transition('continuation_decision', 'provider stopped without a tool call');
-      break;
-    }
-    machine.transition('tool_call_validation', 'tool calls validated against scenario');
-    options.caps.reserveMcpCalls(sessionCalls, response.orderedToolCalls.length);
-    sessionCalls += response.orderedToolCalls.length;
-    machine.transition('tool_execution', 'ordered calls bridged to pinned MCP target');
-    result = await executeGitModelCalls({ baseDirectory: options.baseDirectory, trialId: `${scenario.id}-t01`, runtime: options.runtime, scenario, calls: response.orderedToolCalls });
-    machine.transition('post_call_snapshot', 'independent snapshot captured');
-    machine.transition('verifier_checkpoint', 'git-verifier-v1 checkpoint recorded');
-    machine.transition('continuation_decision', 'tool results require final provider stop');
-    for (const [index, call] of response.orderedToolCalls.entries()) messages.push({ role: 'tool', name: call.name, toolCallId: call.id, content: JSON.stringify(result.execution.calls[index]?.rawOutcome ?? {}) });
-  }
-  if (result === null) result = await executeGitModelCalls({ baseDirectory: options.baseDirectory, trialId: `${scenario.id}-t01`, runtime: options.runtime, scenario, calls: [] });
+  const { trajectory, messages, requests, responses, result, sessionCalls } = await executeDeterministicMockGitTurns({
+    machine,
+    caps: options.caps,
+    baseDirectory: options.baseDirectory,
+    trialId: `${scenario.id}-t01`,
+    sessionId: scenario.id,
+    runtime: options.runtime,
+    scenario,
+    exactSchemas: options.exactSchemas,
+    promptDigest: options.promptDigest,
+    scenarioDigest: options.scenarioDigest,
+    authorizationDigest: options.authorizationDigest,
+    systemInstructions: createPromptManifest(TOOL_SCHEMA_DIGEST, options.scenarioDigest).systemPrompt,
+  });
   machine.transition('final_verification', 'independent verifier is authoritative');
   machine.transition('target_shutdown', 'target shutdown evidence retained');
   machine.transition('cleanup', 'fixture/process/sentinel cleanup checked');
@@ -252,10 +220,6 @@ async function runSession(options: {
   options.store.writeJson(`${prefix}/state-journal.json`, { model: machine.journal(), target: result.execution.journal });
   options.store.writeJson(`${prefix}/terminal.json`, terminal);
   return terminal;
-}
-
-function toolDefinitions(raw: JsonObject[], allowed: ReadonlySet<string>): ModelToolDefinition[] {
-  return raw.filter((entry) => allowed.has(String(entry.name))).map((entry) => ({ name: String(entry.name), description: typeof entry.description === 'string' ? entry.description : '', inputSchema: entry.inputSchema as JsonObject }));
 }
 
 function rejectProviderEnvironment(): void {

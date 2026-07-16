@@ -40,6 +40,11 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           package-manager-cache: false
+      - name: Set up uv for the exact provider-free pilot Python
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: 0.11.28
+          enable-cache: false
       - run: npm ci
       - run: npm run build
       - run: npm run typecheck
@@ -55,6 +60,10 @@ jobs:
           node bin/oculory --help
           node bin/oculory --version
           node bin/oculory doctor
+      - name: Prepare the pinned provider-free Git MCP target
+        run: node scripts/prepare-pilot-target.mjs
+      - name: Run the offline pilot smoke with spaces
+        run: npm run pilot:smoke -- --spaces
 
   offline-experiments:
     name: Deterministic offline experiments

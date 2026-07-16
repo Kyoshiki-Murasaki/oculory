@@ -30,7 +30,7 @@ export const GIT_GATE_E1_NORMALIZATION_RULES = Object.freeze([
 
 export interface ExternalRecordingProvenance {
   runId: string;
-  source: { commit: string; dirty: false; sourceTreeDigest: string };
+  source: { commit: string; dirty: boolean; sourceTreeDigest: string };
   runtime: GitSpikeRuntimeInspection;
   executableSha256: string;
   os: string;

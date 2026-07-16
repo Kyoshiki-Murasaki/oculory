@@ -41,7 +41,11 @@
     "experiment:filesystem": "npm run build && node bin/oculory fs-experiment",
     "experiment:issue-tracker": "npm run build && node bin/oculory issue-experiment",
     "prepack": "npm run build",
-    "verify:package": "node scripts/verify-package.mjs"
+    "verify:package": "node scripts/verify-package.mjs",
+    "pilot:doctor": "npm run build && node dist/pilot/src/cli.js doctor",
+    "pilot:run": "npm run build && node dist/pilot/src/cli.js run",
+    "pilot:verify-report": "npm run build && node dist/pilot/src/cli.js verify-report",
+    "pilot:smoke": "npm run build && node dist/pilot/src/cli.js smoke"
   },
   "dependencies": {},
   "devDependencies": {

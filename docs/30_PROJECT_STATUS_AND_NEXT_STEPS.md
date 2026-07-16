@@ -1,6 +1,6 @@
 # 30 — Project status and next steps
 
-_Canonical handoff updated through Phase 7 public engineering readiness on 2026-07-13. Earlier “current status” documents are point-in-time records; use this file for present state._
+_Canonical handoff updated for Phase 8 provider-free external-developer pilot preparation on 2026-07-15. Earlier “current status” documents are point-in-time records; use this file for present state._
 
 ## Canonical public repository and history boundary
 
@@ -8,13 +8,15 @@ The public repository is `https://github.com/Kyoshiki-Murasaki/oculory` and its 
 
 This is a one-root publication discontinuity, not a history migration. Older commit hashes, `master` branch references, milestone tags, and PR chronology retained in docs 31–43 are legacy/private-history evidence identifiers only. They are not reachable current public commits or refs and must not be restored, grafted, merged, or presented as current public history.
 
-Gate F0 implementation and its tracked documentation are already present in the fresh public root. There is no current Gate F0 pull request awaiting review. The active public-readiness work is Phase 7 on `phase7-public-engineering-readiness`, targeting `main`.
+Gate F0 implementation and its tracked documentation are already present in the fresh public root. There is no current Gate F0 pull request awaiting review. Phase 7 merged normally at `4ae893b2dfc1403da3647a32e8f59c9a2108e359`; exact post-merge CI run `29403228559` passed all six required jobs. Its remote feature branch was deleted and its local feature branch retained. Active work is Phase 8 on `phase8-offline-developer-pilot`, preparing a provider-free pilot kit against `main`.
 
 ## Executive status
 
 Gate F0 has now **passed** its offline-only scope. From clean commit `8ebf12feb5affedcee1dad041e4b95218f809b30`, authoritative run `git-gate-f0-offline-20260712T210744Z` passed six/six deterministic mock sessions through fresh pinned Git MCP fixtures/processes, both applicable approved-suite checks, 57/57 registered fault cases, seven determinism repeats, complete checksum/evidence reconstruction, and clean process/fixture/sentinel cleanup. It made zero real provider calls, read/requested zero real credentials, performed zero provider network calls/retries, and incurred exactly zero provider cost. The prior run `git-gate-f0-offline-20260712T210649Z` failed on scenario tool exposure, remains preserved, and was not used for replacement sessions. See `docs/43_GATE_F0_OFFLINE_PREPARATION_AND_VALIDATION.md`.
 
 The provider registry still contains only the deterministic non-network mock. The F1 authorization template is `draft`, explicitly says `NOT AUTHORIZED — TEMPLATE ONLY`, and is non-executable. No real provider adapter was added. **F1 and F2 remain unauthorized and unstarted.**
+
+Phase 8 selected the offline external-developer usability-pilot path instead of Gate F1. It adds repository-only doctor/run/report-verification/smoke commands, a local-first privacy model, Track A guided workflow, Track B readiness assessment, pre-registered success/counting rules, and cross-platform provider-free CI validation. It prepares infrastructure only: no participant has been recruited or contacted, no human pilot has run, and no usage, adoption, demand, willingness-to-pay, or product-market evidence exists. See `docs/45_PHASE8_OFFLINE_EXTERNAL_DEVELOPER_PILOT.md` and `pilot/`.
 
 Phase 6 selected and pinned `mcp-server-git==2026.7.10`. Gate A passed, the bounded three-trial direct feasibility spike passed, and Gate C transport integrity passed. Formal Gate B attempt 1 remains **failed**: its cleanup `git remote` inspection exceeded the existing five-second bound and the legacy throwing path did not finalize that trial's evidence. The later diagnostic run completed but did not supersede that failure. See `docs/36_GIT_MCP_FORMAL_GATE_B_DETERMINISM.md`.
 
@@ -124,12 +126,7 @@ Item 2 is implemented by Phase 7 through offline CI, the portable launcher, pack
 
 ## Exact next development decision
 
-Completion of Phase 7 does not authorize Gate F1. The next decision is one of:
-
-1. Separately design and authorize a minimal Gate F1 live-model smoke with the exact provider, exact model snapshot, current pricing, privacy terms, region, execution window, scenario list, caps, endpoint allowlist, retry policy, unknown threshold, and hard dollar cap; or
-2. Begin a small external-developer usability pilot using only the reproducible offline workflow.
-
-Do not choose or execute Gate F1 automatically.
+Phase 8 chose and is preparing the provider-free external-developer pilot; it did not choose Gate F1. After the kit has green exact-head CI and an independent audit, the next decision is whether to authorize recruitment of three to five developers under the pre-registered local-first protocol. Until that separate decision, do not contact participants or run a human session. Gate F1/F2 remain unauthorized and must not be inferred from pilot readiness.
 
 ## Handoff map
 
@@ -144,5 +141,6 @@ Do not choose or execute Gate F1 automatically.
 - Unexecuted Gate F proposal: `docs/42_GATE_F_LIVE_MODEL_PROPOSAL.md`.
 - Gate F0 offline implementation and evidence: `docs/43_GATE_F0_OFFLINE_PREPARATION_AND_VALIDATION.md`.
 - Phase 7 CI, CLI, package, and public-history record: `docs/44_PHASE7_PUBLIC_ENGINEERING_READINESS.md`.
+- Phase 8 provider-free external-developer pilot kit: `docs/45_PHASE8_OFFLINE_EXTERNAL_DEVELOPER_PILOT.md` and `pilot/`.
 
 Before future implementation work, run the offline baseline above and inspect `git status --short`. Do not create a fourth synthetic target as the next phase.
