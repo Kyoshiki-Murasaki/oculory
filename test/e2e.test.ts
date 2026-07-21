@@ -63,13 +63,34 @@ test('cli: help exits 0, unknown command exits 1 with message', () => {
   assert.match(bad.err, /unknown command/);
 });
 
+test('public record and approve never fall through to advanced model or miner commands', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oculory-public-dispatch-'));
+  const record = cli(['record', 'missing-task-name', '--policy', 'model'], dir);
+  assert.equal(record.code, 1);
+  assert.match(record.err, /registered task must be a regular file/);
+  assert.doesNotMatch(record.err, /OPENAI_API_KEY|policy model/);
+
+  const approve = cli(['approve', 'candidate-shaped-id', '--yes'], dir);
+  assert.equal(approve.code, 1);
+  assert.match(approve.err, /invalid public run ID/);
+  assert.doesNotMatch(approve.out + approve.err, /Approved candidate|candidate approval/);
+});
+
+test('public commands refuse protected evidence as their writable store', () => {
+  const root = mkdtempSync(join(tmpdir(), 'oculory-public-protected-'));
+  const protectedStore = join(root, '.oculory', 'runs-live');
+  const result = cli(['show', 'run_0001'], protectedStore);
+  assert.equal(result.code, 1);
+  assert.match(result.err, /must not target protected evidence/);
+});
+
 test('cli: pipeline commands chain with correct exit codes, run exits 2 under a mutation', () => {
   const dir = mkdtempSync(join(tmpdir(), 'oculory-cli2-'));
-  assert.equal(cli(['record', '--all'], dir).code, 0);
+  assert.equal(cli(['advanced', 'record', '--all'], dir).code, 0);
   assert.equal(cli(['verify'], dir).code, 0);
   assert.equal(cli(['mine'], dir).code, 0);
   assert.equal(cli(['review'], dir).code, 0);
-  assert.equal(cli(['approve', '--all-stable'], dir).code, 0);
+  assert.equal(cli(['advanced', 'approve', '--all-stable'], dir).code, 0);
   assert.equal(cli(['suite'], dir).code, 0);
   assert.equal(cli(['run'], dir).code, 0, 'unmutated run must pass');
   const mutated = cli(['run', '--mutation', 'silent_write_failure'], dir);

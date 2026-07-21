@@ -1,0 +1,49 @@
+name: Oculory replay
+description: Replay an Oculory contract with a configured provider-neutral agent profile.
+
+inputs:
+  task:
+    description: Path to an oculory-task-v1 YAML file, relative to working-directory.
+    required: true
+  contract:
+    description: Path to an oculory-contract-v1 YAML file, relative to working-directory.
+    required: true
+  model:
+    description: Agent profile label declared by the task.
+    required: true
+  working-directory:
+    description: Repository-relative directory containing the task workspace.
+    required: false
+    default: .
+
+outputs:
+  report-path:
+    description: Absolute path to the persisted machine-readable replay report.
+    value: ${{ steps.replay.outputs.report-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build the pinned Action source
+      shell: bash
+      run: node "$GITHUB_ACTION_PATH/scripts/action-install.mjs"
+
+    - name: Validate inputs
+      shell: bash
+      env:
+        OCULORY_ACTION_TASK: ${{ inputs.task }}
+        OCULORY_ACTION_CONTRACT: ${{ inputs.contract }}
+        OCULORY_ACTION_MODEL: ${{ inputs.model }}
+        OCULORY_ACTION_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      run: node "$GITHUB_ACTION_PATH/scripts/action-entry.mjs" validate
+
+    - name: Replay contract
+      id: replay
+      shell: bash
+      env:
+        NO_COLOR: "1"
+        OCULORY_ACTION_TASK: ${{ inputs.task }}
+        OCULORY_ACTION_CONTRACT: ${{ inputs.contract }}
+        OCULORY_ACTION_MODEL: ${{ inputs.model }}
+        OCULORY_ACTION_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      run: node "$GITHUB_ACTION_PATH/scripts/action-entry.mjs" replay

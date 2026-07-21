@@ -1,0 +1,82 @@
+version: oculory-task-v1
+task_id: demo-create-feature-branch
+prompt: Create feature/demo from develop, add the demo files, and commit them.
+agent_profiles:
+  baseline:
+    argv:
+      - oculory-demo-agent
+      - --mcp-config
+      - "{mcp_config}"
+      - --mode
+      - baseline
+      - --run-id
+      - "{run_id}"
+    env_allowlist:
+      - NODE_OPTIONS
+      - OCULORY_NETWORK_GUARD_PROOF
+      - PATH
+      - TMPDIR
+      - SystemRoot
+      - TEMP
+      - TMP
+  changed:
+    argv:
+      - oculory-demo-agent
+      - --mcp-config
+      - "{mcp_config}"
+      - --mode
+      - changed
+      - --run-id
+      - "{run_id}"
+    env_allowlist:
+      - NODE_OPTIONS
+      - OCULORY_NETWORK_GUARD_PROOF
+      - PATH
+      - TMPDIR
+      - SystemRoot
+      - TEMP
+      - TMP
+mcp_server:
+  command: oculory-demo-server
+  arguments:
+    - --workspace
+    - "{workspace}"
+  env_allowlist:
+    - NODE_OPTIONS
+    - OCULORY_NETWORK_GUARD_PROOF
+    - PATH
+    - TMPDIR
+    - SystemRoot
+    - TEMP
+    - TMP
+workspace:
+  strategy: command
+  setup:
+    - oculory-demo-fixture
+    - prepare
+    - "{workspace}"
+  reset:
+    - oculory-demo-fixture
+    - reset
+    - "{workspace}"
+  cleanup:
+    - oculory-demo-fixture
+    - cleanup
+    - "{workspace}"
+targets:
+  - id: workspace
+    adapter: git-filesystem
+    configuration:
+      mode: git
+      baseRefs:
+        - develop
+        - main
+    watch:
+      branches:
+        - develop
+        - feature/demo
+        - main
+      paths:
+        - .
+claim_extraction:
+  type: stdout-final

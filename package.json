@@ -17,7 +17,13 @@
     "node": ">=22.13"
   },
   "bin": {
-    "oculory": "./bin/oculory"
+    "oculory": "./bin/oculory",
+    "oculory-demo-agent": "./dist/src/mlp/scripted-agent-main.js",
+    "oculory-demo-server": "./dist/src/mlp/demo-server-main.js",
+    "oculory-demo-fixture": "./dist/src/mlp/demo-fixture-main.js"
+  },
+  "exports": {
+    "./adapters": "./dist/src/mlp/adapters/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -42,25 +48,28 @@
     "experiment:issue-tracker": "npm run build && node bin/oculory issue-experiment",
     "prepack": "npm run build",
     "verify:package": "node scripts/verify-package.mjs",
+    "verify:action": "npm run build && node scripts/verify-action.mjs",
     "pilot:doctor": "npm run build && node dist/pilot/src/cli.js doctor",
     "pilot:run": "npm run build && node dist/pilot/src/cli.js run",
     "pilot:verify-report": "npm run build && node dist/pilot/src/cli.js verify-report",
     "pilot:smoke": "npm run build && node dist/pilot/src/cli.js smoke"
   },
-  "dependencies": {},
+  "dependencies": {
+    "pg": "^8.22.0",
+    "yaml": "^2.9.0"
+  },
   "devDependencies": {
     "@types/node": "^25.0.0",
+    "@types/pg": "^8.20.0",
     "typescript": "^6.0.0"
   },
   "files": [
     "dist/src",
     "bin",
-    "fixtures",
-    "docs",
-    "CHANGELOG.md",
-    "CONTRIBUTING.md",
+    "schemas",
+    "fixtures/demo",
+    "fixtures/seed.json",
     "README.md",
-    "LICENSE",
-    "SECURITY.md"
+    "LICENSE"
   ]
 }

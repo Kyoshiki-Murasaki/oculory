@@ -1,0 +1,33 @@
+# This is an editable outcome contract drafted from one approved run.
+version: oculory-contract-v1
+task: create-feature-branch
+tolerance:
+  runs: 12
+  min_pass: 10
+
+assertions:
+  - id: feature-branch-created
+    target: repository
+    selector:
+      kind: branch
+      branch: feature/demo
+    operator: exists
+    expected: true
+    evaluation: exact
+
+  - id: branch-starts-at-develop
+    target: repository
+    selector:
+      kind: branch_base
+      branch: feature/demo
+    operator: equals
+    expected: develop
+    evaluation: exact
+
+  - id: changes-committed
+    target: repository
+    selector:
+      kind: clean_tree
+    operator: equals
+    expected: true
+    evaluation: exact

@@ -1,0 +1,52 @@
+version: oculory-contract-v1
+task: demo-create-feature-branch
+tolerance:
+  runs: 12
+  min_pass: 10
+assertions:
+  - id: create-feature-branch
+    target: workspace
+    selector:
+      kind: branch_base
+      branch: feature/demo
+    operator: equals
+    expected: develop
+    evaluation: exact
+  - id: feature-branch-exists
+    target: workspace
+    selector:
+      kind: branch
+      branch: feature/demo
+    operator: exists
+    expected: true
+    evaluation: exact
+  - id: feature-branch-current
+    target: workspace
+    selector:
+      kind: current_branch
+    operator: equals
+    expected: feature/demo
+    evaluation: exact
+  - id: feature-file-exists
+    target: workspace
+    selector:
+      kind: file
+      path: feature.txt
+    operator: exists
+    expected: true
+    evaluation: exact
+  - id: config-file-exists
+    target: workspace
+    selector:
+      kind: file
+      path: config/demo.txt
+    operator: exists
+    expected: true
+    evaluation: exact
+  - id: no-staged-files
+    target: workspace
+    selector:
+      kind: staged_files
+    operator: none
+    expected: []
+    evaluation: exact
