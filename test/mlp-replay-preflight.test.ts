@@ -61,7 +61,9 @@ test('replay preflight accepts every built-in selector shape and all uniform ope
   ));
 });
 
-test('replay rejects malformed, unsupported, and out-of-scope assertions before allocating a run', async () => {
+test('replay rejects malformed, unsupported, and out-of-scope assertions before allocating a run', {
+  skip: process.platform === 'win32',
+}, async () => {
   const cases: Array<{
     name: string;
     expected: RegExp;

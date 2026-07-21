@@ -367,15 +367,15 @@ function assertTrackedLocation(cwd: string, path: string): void {
   if (worktree.error !== undefined || worktree.status !== 0 || worktree.stdout.trim().length === 0) {
     throw new Error('contract location must be inside a Git worktree');
   }
-  const worktreeRoot = realpathSync(worktree.stdout.trim());
-  const canonicalCwd = realpathSync(cwd);
+  const worktreeRoot = realpathSync.native(worktree.stdout.trim());
+  const canonicalCwd = realpathSync.native(cwd);
   if (!inside(worktreeRoot, canonicalCwd)) throw new Error('contract location must be inside a Git worktree');
   const directory = dirname(path);
   if (existsSync(directory) && !lstatSync(directory).isDirectory()) {
     throw new Error('contract directory must be a real directory inside the Git worktree');
   }
   const existingParent = existsSync(directory) ? directory : dirname(directory);
-  if (!inside(worktreeRoot, realpathSync(existingParent))) {
+  if (!inside(worktreeRoot, realpathSync.native(existingParent))) {
     throw new Error('contract directory must remain inside the Git worktree');
   }
   if (existsSync(path) && !lstatSync(path).isFile()) throw new Error('contract path must be a regular file');

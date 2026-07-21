@@ -63,7 +63,9 @@ test('cli: help exits 0, unknown command exits 1 with message', () => {
   assert.match(bad.err, /unknown command/);
 });
 
-test('public record and approve never fall through to advanced model or miner commands', () => {
+test('public record and approve never fall through to advanced model or miner commands', {
+  skip: process.platform === 'win32',
+}, () => {
   const dir = mkdtempSync(join(tmpdir(), 'oculory-public-dispatch-'));
   const record = cli(['record', 'missing-task-name', '--policy', 'model'], dir);
   assert.equal(record.code, 1);

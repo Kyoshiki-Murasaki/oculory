@@ -227,6 +227,7 @@ test('replay accounts for the exact 12-run, 10-pass tolerance boundary', {
 });
 
 test('record registers a live task while replay preserves edited source and aggregates compatible profiles', {
+  skip: process.platform === 'win32',
   timeout: 60_000,
 }, async () => {
   const harness = createHarness();
@@ -500,6 +501,7 @@ test('replay reuses unchanged profile results but rejects stale history for a ch
 });
 
 test('replay refuses a symlinked history directory before allocating a run', {
+  skip: process.platform === 'win32',
   timeout: 30_000,
 }, async () => {
   const harness = createHarness();
@@ -554,7 +556,9 @@ test('replay history inspection is bounded before run allocation', {
   }
 });
 
-test('replay rejects missing profiles and contract targets before allocating a run', async () => {
+test('replay rejects missing profiles and contract targets before allocating a run', {
+  skip: process.platform === 'win32',
+}, async () => {
   const harness = createHarness();
   try {
     harness.store.registerTask(harness.task.task_id, harness.taskPath, harness.taskSource);

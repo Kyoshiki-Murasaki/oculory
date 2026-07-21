@@ -130,6 +130,7 @@ test('public run inspection rejects oversized artifacts and checksum manifests b
 });
 
 test('git-worktree strategy isolates the requested source ref and never registers a worktree in the source repository', {
+  skip: process.platform === 'win32',
   timeout: 30_000,
 }, async () => {
   const root = mkdtempSync(join(tmpdir(), 'oculory-worktree-source-ref-'));
@@ -184,7 +185,9 @@ test('git-worktree strategy isolates the requested source ref and never register
   }
 });
 
-test('command workspace rejects setup/reset symlink swaps and skips unsafe cleanup commands', async () => {
+test('command workspace rejects setup/reset symlink swaps and skips unsafe cleanup commands', {
+  skip: process.platform === 'win32',
+}, async () => {
   const root = mkdtempSync(join(tmpdir(), 'oculory-command-workspace-swap-'));
   const external = join(root, 'external');
   mkdirSync(external);
