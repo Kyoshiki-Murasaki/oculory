@@ -156,7 +156,7 @@ The default contract requests 12 attempts and requires 10 behavioral passes. Eve
 Phase 9 v0.1 release-candidate pin (awaiting independent audit):
 
 ```yaml
-- uses: Kyoshiki-Murasaki/oculory@c0c7fc7fb911313611d20b9182b1b23c23166135
+- uses: Kyoshiki-Murasaki/oculory@5e4362ced3432be524a3dbd4bbec6eb5e4e8d2bb
   with:
     task: fixtures/demo/task.yaml
     contract: fixtures/demo/contract.yaml
