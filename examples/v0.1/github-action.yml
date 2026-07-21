@@ -1,0 +1,27 @@
+name: Oculory pre-release replay
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22.13.0
+          package-manager-cache: false
+
+      # Phase 9 v0.1 release-candidate pin; awaiting independent audit.
+      - uses: Kyoshiki-Murasaki/oculory@c0c7fc7fb911313611d20b9182b1b23c23166135
+        with:
+          task: fixtures/demo/task.yaml
+          contract: fixtures/demo/contract.yaml
+          model: baseline
