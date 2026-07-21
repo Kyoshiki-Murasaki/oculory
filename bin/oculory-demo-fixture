@@ -1,0 +1,2 @@
+#!/usr/bin/env node
+import '../dist/src/mlp/demo-fixture-main.js';

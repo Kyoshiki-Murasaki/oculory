@@ -113,7 +113,7 @@ test('suite --run-dir <dir>: model-replay can subsequently find the suite at the
     process.execPath,
     [
       '--experimental-sqlite', '--no-warnings', 'test/support/model-smoke-stub-bootstrap.mjs',
-      'model-replay', '--suite', suitePath, '--model', 'gpt-4.1-mini', '--trials', '1', '--budget-usd', '1', '--out-dir', out,
+      'advanced', 'model-replay', '--suite', suitePath, '--model', 'gpt-4.1-mini', '--trials', '1', '--budget-usd', '1', '--out-dir', out,
     ],
     { encoding: 'utf8', env: { ...process.env, OPENAI_API_KEY: 'sk-test-not-real' } },
   );

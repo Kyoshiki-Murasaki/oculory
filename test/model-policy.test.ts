@@ -296,28 +296,28 @@ function cli(args: string[], storeDir: string, env: Record<string, string | unde
 
 test('cli: --policy scripted is an explicit alias for the (unchanged) default scripted policies', () => {
   const dir = mkdtempSync(join(tmpdir(), 'oculory-modelcli-'));
-  const r = cli(['record', '--smoke', '--policy', 'scripted'], dir);
+  const r = cli(['advanced', 'record', '--smoke', '--policy', 'scripted'], dir);
   assert.equal(r.code, 0);
   assert.match(r.out, /Recorded \d+ traces/);
 });
 
 test('cli: --policy model without OPENAI_API_KEY fails clearly and never reaches a network call', () => {
   const dir = mkdtempSync(join(tmpdir(), 'oculory-modelcli-'));
-  const r = cli(['record', '--smoke', '--policy', 'model'], dir, { OPENAI_API_KEY: '' });
+  const r = cli(['advanced', 'record', '--smoke', '--policy', 'model'], dir, { OPENAI_API_KEY: '' });
   assert.equal(r.code, 1);
   assert.match(r.err, /OPENAI_API_KEY/);
 });
 
 test('cli: --trials 0 is rejected as a usage error', () => {
   const dir = mkdtempSync(join(tmpdir(), 'oculory-modelcli-'));
-  const r = cli(['record', '--smoke', '--trials', '0'], dir);
+  const r = cli(['advanced', 'record', '--smoke', '--trials', '0'], dir);
   assert.equal(r.code, 1);
   assert.match(r.err, /--trials must be a positive integer/);
 });
 
 test('cli: --budget-usd 0 is rejected as a usage error before any client is constructed', () => {
   const dir = mkdtempSync(join(tmpdir(), 'oculory-modelcli-'));
-  const r = cli(['record', '--smoke', '--policy', 'model', '--budget-usd', '0'], dir, { OPENAI_API_KEY: 'sk-test-not-real' });
+  const r = cli(['advanced', 'record', '--smoke', '--policy', 'model', '--budget-usd', '0'], dir, { OPENAI_API_KEY: 'sk-test-not-real' });
   assert.equal(r.code, 1);
   assert.match(r.err, /--budget-usd must be a positive number/);
 });

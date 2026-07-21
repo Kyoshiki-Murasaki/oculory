@@ -1,0 +1,428 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oculory.dev/schemas/task.schema.json",
+  "title": "Oculory task",
+  "description": "Provider-neutral configuration for one Oculory record task.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "task_id",
+    "prompt",
+    "agent_profiles",
+    "mcp_server",
+    "workspace",
+    "targets"
+  ],
+  "properties": {
+    "version": {
+      "const": "oculory-task-v1"
+    },
+    "task_id": {
+      "$ref": "#/$defs/id"
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 65536
+    },
+    "agent_profiles": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 64,
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/agentProfile"
+      }
+    },
+    "mcp_server": {
+      "$ref": "#/$defs/mcpServer"
+    },
+    "workspace": {
+      "$ref": "#/$defs/workspace"
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/target"
+      },
+      "$comment": "Target IDs must be unique. The maintained loader enforces this cross-item constraint."
+    },
+    "claim_extraction": {
+      "$ref": "#/$defs/claimExtraction",
+      "default": {
+        "type": "stdout-final"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "envName": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "maxLength": 128,
+      "not": {
+        "pattern": "^(?:gh[pousr]_[A-Za-z0-9_]{8,}|github_pat_[A-Za-z0-9_]{8,}|AIza[A-Za-z0-9_-]{20,}|sk[_-][A-Za-z0-9_-]{8,})$"
+      }
+    },
+    "envAllowlist": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/envName"
+      }
+    },
+    "argvEntry": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?:[^{}]|\\{(?:prompt|prompt_file|mcp_config|workspace|model|run_id)\\})*$",
+      "description": "One literal argv entry. The loader also rejects shell operators and interpolation syntax."
+    },
+    "executable": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^[^{}\\r\\n;|`]+$",
+      "description": "One executable name or path, never a shell command string."
+    },
+    "argv": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/argvEntry"
+      }
+    },
+    "arguments": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/argvEntry"
+      }
+    },
+    "agentProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv", "env_allowlist"],
+      "properties": {
+        "argv": {
+          "$ref": "#/$defs/argv"
+        },
+        "env_allowlist": {
+          "$ref": "#/$defs/envAllowlist"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "mcpServer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "arguments", "env_allowlist"],
+      "properties": {
+        "command": {
+          "$ref": "#/$defs/executable"
+        },
+        "arguments": {
+          "$ref": "#/$defs/arguments"
+        },
+        "env_allowlist": {
+          "$ref": "#/$defs/envAllowlist"
+        }
+      }
+    },
+    "safeRelativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?!/)(?![A-Za-z]:[\\\\/])(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$)).+$",
+      "description": "A path confined to the disposable workspace. Absolute paths and traversal segments are rejected."
+    },
+    "workspace": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["strategy", "repository"],
+          "properties": {
+            "strategy": {
+              "const": "git-worktree"
+            },
+            "repository": {
+              "$ref": "#/$defs/safeRelativePath"
+            },
+            "base_ref": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["strategy", "setup", "reset", "cleanup"],
+          "properties": {
+            "strategy": {
+              "const": "command"
+            },
+            "setup": {
+              "$ref": "#/$defs/argv"
+            },
+            "reset": {
+              "$ref": "#/$defs/argv"
+            },
+            "cleanup": {
+              "$ref": "#/$defs/argv"
+            }
+          }
+        }
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "adapter", "watch"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "adapter": { "const": "git-filesystem" }
+            },
+            "required": ["adapter"]
+          },
+          "then": {
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "configuration": {
+                      "properties": { "mode": { "const": "filesystem" } },
+                      "required": ["mode"]
+                    }
+                  },
+                  "required": ["configuration"]
+                },
+                "then": {
+                  "properties": {
+                    "watch": { "not": { "required": ["branches"] } }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "watch": { "required": ["branches", "paths"] }
+                  }
+                }
+              }
+            ],
+            "properties": {
+              "configuration": {
+                "not": {
+                  "anyOf": [
+                    { "required": ["sourcePath"] },
+                    { "required": ["inPlace"] },
+                    { "required": ["watchPaths"] },
+                    { "required": ["watchBranches"] }
+                  ]
+                }
+              },
+              "watch": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["paths"],
+                "properties": {
+                  "paths": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 128,
+                    "uniqueItems": true,
+                    "items": { "$ref": "#/$defs/safeRelativePath" }
+                  },
+                  "branches": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 128,
+                    "uniqueItems": true,
+                    "items": { "type": "string", "minLength": 1, "maxLength": 1024 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "adapter": { "const": "postgres" } },
+            "required": ["adapter"]
+          },
+          "then": {
+            "properties": {
+              "watch": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["tables"],
+                "properties": {
+                  "tables": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 128,
+                    "uniqueItems": true,
+                    "items": { "type": "string", "minLength": 1, "maxLength": 1024 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "adapter": { "const": "github-api" } },
+            "required": ["adapter"]
+          },
+          "then": {
+            "properties": {
+              "watch": {
+                "type": "object",
+                "additionalProperties": false,
+                "minProperties": 1,
+                "properties": {
+                  "issues": {
+                    "type": "array",
+                    "maxItems": 128,
+                    "uniqueItems": true,
+                    "items": { "type": "integer", "minimum": 1 }
+                  },
+                  "pullRequests": {
+                    "type": "array",
+                    "maxItems": 128,
+                    "uniqueItems": true,
+                    "items": { "type": "integer", "minimum": 1 }
+                  },
+                  "branches": {
+                    "type": "array",
+                    "maxItems": 128,
+                    "uniqueItems": true,
+                    "items": { "type": "string", "minLength": 1, "maxLength": 1024 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "adapter": {
+          "$ref": "#/$defs/id"
+        },
+        "configuration": {
+          "type": "object",
+          "default": {}
+        },
+        "watch": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "Adapter-specific boundary for independently observed state."
+        }
+      }
+    },
+    "claimExtraction": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "const": "stdout-final"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "field"],
+          "properties": {
+            "type": {
+              "const": "json-field"
+            },
+            "field": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_-]*(?:\\.[A-Za-z_][A-Za-z0-9_-]*)*$",
+              "maxLength": 256
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "prefix"],
+          "properties": {
+            "type": {
+              "const": "line-prefix"
+            },
+            "prefix": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "pattern", "max_bytes"],
+          "properties": {
+            "type": {
+              "const": "regex"
+            },
+            "pattern": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "description": "A loader-validated regular expression. Backreferences, lookbehind, and nested quantified groups are rejected."
+            },
+            "max_bytes": {
+              "$ref": "#/$defs/extractionLimit"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "path", "max_bytes"],
+          "properties": {
+            "type": {
+              "const": "output-file"
+            },
+            "path": {
+              "$ref": "#/$defs/safeRelativePath"
+            },
+            "max_bytes": {
+              "$ref": "#/$defs/extractionLimit"
+            }
+          }
+        }
+      ]
+    },
+    "extractionLimit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1048576
+    }
+  }
+}

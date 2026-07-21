@@ -44,7 +44,7 @@ function spawnCli(args: string[]): { code: number; out: string; err: string } {
 
 test('model-smoke: reaches manifest creation without the commandLine TDZ crash (regression)', () => {
   const outDir = mkdtempSync(join(tmpdir(), 'oculory-modelsmoke-manifest-'));
-  const r = spawnCli(['model-smoke', '--model', 'gpt-4.1-mini', '--trials', '1', '--budget-usd', '1', '--out-dir', outDir]);
+  const r = spawnCli(['advanced', 'model-smoke', '--model', 'gpt-4.1-mini', '--trials', '1', '--budget-usd', '1', '--out-dir', outDir]);
 
   assert.doesNotMatch(r.err, TDZ_MESSAGE, `TDZ regression reintroduced; stderr: ${r.err}`);
   assert.equal(r.code, 0, `expected a clean exit; stderr: ${r.err}`);
@@ -55,7 +55,7 @@ test('model-smoke: reaches manifest creation without the commandLine TDZ crash (
   assert.equal(manifest.kind, 'model-smoke');
   assert.equal(manifest.model, 'gpt-4.1-mini');
   // Proves `commandLine` (built from the real argv) was captured correctly, not just absent-of-crash.
-  assert.match(manifest.command, /^oculory model-smoke --model gpt-4\.1-mini --trials 1 --budget-usd 1 --out-dir/);
+  assert.match(manifest.command, /^oculory advanced model-smoke --model gpt-4\.1-mini --trials 1 --budget-usd 1 --out-dir/);
 
   assert.equal(existsSync(join(outDir, 'reports', 'model-smoke-summary.json')), true);
 });
@@ -63,7 +63,7 @@ test('model-smoke: reaches manifest creation without the commandLine TDZ crash (
 test('model-experiment: also reaches manifest creation via the same openModelRun path (regression)', () => {
   const outDir = mkdtempSync(join(tmpdir(), 'oculory-modelexp-manifest-'));
   const r = spawnCli([
-    'model-experiment',
+    'advanced', 'model-experiment',
     '--model', 'gpt-4.1-mini',
     '--trials', '1',
     '--budget-usd', '1',
@@ -76,15 +76,15 @@ test('model-experiment: also reaches manifest creation via the same openModelRun
 
   const manifest = JSON.parse(readFileSync(join(outDir, 'manifest.json'), 'utf8')) as { kind: string; command: string };
   assert.equal(manifest.kind, 'model-experiment');
-  assert.match(manifest.command, /^oculory model-experiment\b/);
+  assert.match(manifest.command, /^oculory advanced model-experiment\b/);
 });
 
 test('model-smoke --append: the append-manifest path also reads commandLine safely (regression)', () => {
   const outDir = mkdtempSync(join(tmpdir(), 'oculory-modelsmoke-append-'));
-  const first = spawnCli(['model-smoke', '--model', 'gpt-4.1-mini', '--trials', '1', '--budget-usd', '1', '--out-dir', outDir]);
+  const first = spawnCli(['advanced', 'model-smoke', '--model', 'gpt-4.1-mini', '--trials', '1', '--budget-usd', '1', '--out-dir', outDir]);
   assert.equal(first.code, 0, `first run failed; stderr: ${first.err}`);
 
-  const second = spawnCli(['model-smoke', '--model', 'gpt-4.1-mini', '--trials', '1', '--budget-usd', '1', '--out-dir', outDir, '--append']);
+  const second = spawnCli(['advanced', 'model-smoke', '--model', 'gpt-4.1-mini', '--trials', '1', '--budget-usd', '1', '--out-dir', outDir, '--append']);
   assert.doesNotMatch(second.err, TDZ_MESSAGE, `TDZ regression reintroduced on --append; stderr: ${second.err}`);
   assert.equal(second.code, 0, `expected a clean exit; stderr: ${second.err}`);
 

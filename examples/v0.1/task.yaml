@@ -1,0 +1,56 @@
+# Oculory records the executable named by this profile; it never calls a model SDK.
+version: oculory-task-v1
+task_id: create-feature-branch
+prompt: >-
+  Create feature/demo from develop, add the requested files, and commit the changes.
+
+agent_profiles:
+  local-agent:
+    argv:
+      - local-agent
+      - --prompt-file
+      - "{prompt_file}"
+      - --mcp-config
+      - "{mcp_config}"
+      - --workspace
+      - "{workspace}"
+      - --run-id
+      - "{run_id}"
+    env_allowlist:
+      - PATH
+    model: scripted-baseline
+
+mcp_server:
+  command: task-mcp-server
+  arguments:
+    - --workspace
+    - "{workspace}"
+  env_allowlist:
+    - PATH
+
+workspace:
+  strategy: git-worktree
+  repository: .
+  base_ref: develop
+
+targets:
+  - id: repository
+    adapter: git-filesystem
+    configuration:
+      mode: git
+      baseRefs:
+        - develop
+        - main
+    watch:
+      branches:
+        - develop
+        - feature/demo
+        - main
+      paths:
+        - src
+        - test
+
+# A line prefix avoids treating unrelated progress output as the final claim.
+claim_extraction:
+  type: line-prefix
+  prefix: "CLAIM: "

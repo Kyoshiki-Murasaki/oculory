@@ -5,9 +5,9 @@
  *   3 internal error
  * `--json` on reporting commands emits machine-readable output for CI.
  */
-import { existsSync, readFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { execFileSync, type ExecFileSyncOptions } from 'node:child_process';
+import { join, relative, resolve, sep } from 'node:path';
 import { Store, EXTERNAL_RUNS_SUBDIR, LIVE_RUNS_SUBDIR, MODEL_RUNS_SUBDIR } from '../pipeline/store.js';
 import { RunStore } from '../pipeline/run-store.js';
 import {
@@ -60,12 +60,23 @@ import { verifyAndNormalizeAllIssues } from '../examples/issuetracker/run.js';
 import { recordIssueSession } from '../examples/issuetracker/record.js';
 import { ISSUE_DEFAULT_POLICIES } from '../examples/issuetracker/policy.js';
 import { runIssueModelSmoke, runIssueModelExperiment, runIssueModelReplay } from '../examples/issuetracker/model-run.js';
+import { approveRun } from '../mlp/approve.js';
+import { createBuiltinAdapterRegistry } from '../mlp/adapters/index.js';
+import { loadContractConfig, loadTaskConfig } from '../mlp/config.js';
+import { runDemo } from '../mlp/demo.js';
+import { assertPublicMlpExecutionSupported } from '../mlp/process.js';
+import { assertTaskRunPreflight, executeTaskRun } from '../mlp/record.js';
+import { assertReplayPreflight, replayContract } from '../mlp/replay.js';
+import { PublicRunStore } from '../mlp/run-store.js';
+import { showRun } from '../mlp/show.js';
+import { sanitizeDiagnostic } from '../mlp/redact.js';
 
 const argv = process.argv.slice(2);
-const command = argv[0] ?? 'help';
+const advancedMode = argv[0] === 'advanced';
+const command = (advancedMode ? argv[1] : argv[0]) ?? 'help';
 const flags = new Map<string, string | boolean>();
 const positional: string[] = [];
-for (let i = 1; i < argv.length; i++) {
+for (let i = advancedMode ? 2 : 1; i < argv.length; i++) {
   const a = argv[i]!;
   if (a.startsWith('--')) {
     const eq = a.indexOf('=');
@@ -95,7 +106,7 @@ function out(human: string, machine?: JsonObject): void {
 }
 
 function fail(message: string, code = 1): never {
-  process.stderr.write(`oculory: ${message}\n`);
+  process.stderr.write(`oculory: ${sanitizeDiagnostic(message, [process.cwd()])}\n`);
   process.exit(code);
 }
 
@@ -121,6 +132,10 @@ try {
     }
 
     case 'doctor': {
+      const wantsModel = flags.has('model') || flags.has('check-model') || (positional[0]?.startsWith('model-') ?? false);
+      if (!advancedMode && wantsModel) {
+        fail('provider credential diagnostics are internal; use `oculory advanced doctor --model <name>`');
+      }
       type Status = 'ok' | 'warn' | 'FAIL';
       const checks: { status: Status; name: string; hint?: string }[] = [];
       const push = (status: Status, name: string, hint?: string): void => {
@@ -160,8 +175,13 @@ try {
 
       // git tracked generated files — best-effort; skipped when not a git repo.
       try {
-        execFileSync('git', ['rev-parse', '--is-inside-work-tree'], { stdio: ['ignore', 'pipe', 'ignore'] });
-        const tracked = execFileSync('git', ['ls-files', 'dist', '.oculory', '.env'], { stdio: ['ignore', 'pipe', 'ignore'] })
+        const gitCheck: ExecFileSyncOptions = {
+          stdio: ['ignore', 'pipe', 'ignore'],
+          timeout: 5_000,
+          maxBuffer: 1024 * 1024,
+        };
+        execFileSync('git', ['rev-parse', '--is-inside-work-tree'], gitCheck);
+        const tracked = execFileSync('git', ['ls-files', 'dist', '.oculory', '.env'], gitCheck)
           .toString()
           .trim();
         push(tracked.length === 0 ? 'ok' : 'warn', tracked.length === 0 ? 'no generated files tracked in git' : `generated files tracked in git: ${tracked.split('\n').slice(0, 3).join(', ')}…`, 'git rm --cached the generated files');
@@ -169,8 +189,7 @@ try {
         push('ok', 'git checks skipped (not a git repository)');
       }
 
-      // OPENAI_API_KEY presence — only when a model command is being prepared; never prints the value.
-      const wantsModel = flags.has('model') || flags.has('check-model') || (positional[0]?.startsWith('model-') ?? false);
+      // Provider-key presence is available only through the explicitly advanced doctor surface.
       if (wantsModel) {
         const keyed = Boolean(process.env.OPENAI_API_KEY);
         push(keyed ? 'ok' : 'warn', `OPENAI_API_KEY present: ${keyed ? 'yes' : 'no'}`, 'export OPENAI_API_KEY=sk-... before running model-* commands');
@@ -185,6 +204,72 @@ try {
       humanLines.push(failed ? 'One or more required checks FAILED (see above).' : warned ? 'Environment usable (warnings above). Next: oculory experiment' : 'All checks passed. Next: oculory record --all');
       out(humanLines.join('\n'), { checks, ok: !failed } as unknown as JsonObject);
       if (failed) process.exit(1);
+      break;
+    }
+
+    case 'demo': {
+      requirePublicMlpExecutionSupport();
+      if (positional.length > 0) fail('usage: oculory demo');
+      const result = await runDemo({ color: useColor(), width: terminalWidth() });
+      if (asJson) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      else process.stdout.write(result.output);
+      break;
+    }
+
+    case 'show': {
+      const runId = positional[0] ?? fail('usage: oculory show <run-id> [--diff] [--json]');
+      if (positional.length !== 1) fail('usage: oculory show <run-id> [--diff] [--json]');
+      let shown: ReturnType<typeof showRun>;
+      try {
+        shown = showRun(runId, {
+          store: publicRunStore(),
+          diff: flags.get('diff') === true,
+          json: asJson,
+          color: useColor(),
+          width: terminalWidth(),
+        });
+      } catch (error) {
+        return usageFailure(error);
+      }
+      process.stdout.write(shown.output);
+      break;
+    }
+
+    case 'replay': {
+      requirePublicMlpExecutionSupport();
+      const profile = str('model') ?? fail('usage: oculory replay --model <profile> [--task <task.yaml>] [--contract <contract.yaml>]');
+      if (positional.length > 0) fail('replay accepts task and contract paths through --task and --contract');
+      const publicStore = publicRunStore();
+      const registry = createBuiltinAdapterRegistry();
+      let contract: ReturnType<typeof loadContractConfig>['value'];
+      let taskPath: string;
+      let taskSource: string;
+      try {
+        const contractPath = resolvePublicContractPath();
+        contract = loadContractConfig(contractPath).value;
+        taskPath = str('task') === null
+          ? publicStore.registeredTaskPath(contract.task)
+          : publicStore.resolveTaskPath(resolve(str('task')!));
+        const task = loadTaskConfig(taskPath);
+        taskSource = task.source;
+        assertTaskRunPreflight(task.value, registry, publicStore.projectRoot);
+        assertReplayPreflight(contract, task.value, profile, registry);
+      } catch (error) {
+        return usageFailure(error);
+      }
+      const outcome = await replayContract(contract, {
+        taskPath,
+        taskSource,
+        profile,
+        registry,
+        store: publicStore,
+        reportPath: str('report') ?? undefined,
+        color: useColor(),
+        width: terminalWidth(),
+      });
+      if (asJson) process.stdout.write(`${JSON.stringify(outcome.report, null, 2)}\n`);
+      else process.stdout.write(outcome.human);
+      process.exitCode = outcome.report.exit_code;
       break;
     }
 
@@ -204,6 +289,47 @@ try {
     }
 
     case 'record': {
+      if (!advancedMode) {
+        requirePublicMlpExecutionSupport();
+        const requestedTaskPath = positional[0] ?? fail('usage: oculory record <task.yaml> [--model <profile>]');
+        if (positional.length !== 1) fail('usage: oculory record <task.yaml> [--model <profile>]');
+        const publicStore = publicRunStore();
+        const registry = createBuiltinAdapterRegistry();
+        let loaded: ReturnType<typeof loadTaskConfig>;
+        let source: string;
+        let taskPath: string;
+        try {
+          taskPath = publicStore.resolveTaskPath(requestedTaskPath);
+          loaded = loadTaskConfig(taskPath);
+          source = loaded.source;
+          publicStore.resolveTaskPath(taskPath, source);
+        } catch (error) {
+          return usageFailure(error);
+        }
+        const profile = str('model') ?? str('profile') ?? Object.keys(loaded.value.agent_profiles)[0]!;
+        if (loaded.value.agent_profiles[profile] === undefined) fail(`task has no agent profile '${profile}'`);
+        try {
+          assertTaskRunPreflight(loaded.value, registry, publicStore.projectRoot);
+        } catch (error) {
+          return usageFailure(error);
+        }
+        const executed = await executeTaskRun(loaded.value, {
+          taskPath,
+          taskSource: source,
+          profile,
+          registry,
+          store: publicStore,
+          registerTask: true,
+        });
+        const nextCommand = `oculory approve ${executed.summary.run_id}`;
+        if (asJson) {
+          process.stdout.write(`${JSON.stringify({ summary: executed.summary, next_command: nextCommand }, null, 2)}\n`);
+        } else {
+          process.stdout.write(`Recorded ${executed.summary.run_id}.\n${nextCommand}\n`);
+        }
+        if (executed.summary.classification === 'infrastructure-failed') process.exitCode = 3;
+        break;
+      }
       const fixture = loadFixture(fixturePath);
       const wanted = flags.get('all') === true
         ? SCENARIOS
@@ -346,6 +472,25 @@ try {
     }
 
     case 'approve': {
+      if (!advancedMode) {
+        const runId = positional[0] ?? fail('usage: oculory approve <run-id> [--yes] [--force]');
+        if (positional.length !== 1) fail('usage: oculory approve <run-id> [--yes] [--force]');
+        let draft: Awaited<ReturnType<typeof approveRun>>;
+        try {
+          draft = await approveRun(runId, {
+            store: publicRunStore(),
+            cwd: process.cwd(),
+            yes: flags.get('yes') === true,
+            force: flags.get('force') === true,
+          });
+        } catch (error) {
+          return usageFailure(error);
+        }
+        const display = relative(process.cwd(), draft.path).split(sep).join('/');
+        const human = `Contract written to ${display}\nEdit it, then run:\noculory replay --model <profile>`;
+        out(human, { contract_path: display, task_id: draft.contract.task, next_command: 'oculory replay --model <profile>' } as unknown as JsonObject);
+        break;
+      }
       const st = runDirStore() ?? store;
       const candidates = st.loadCandidates();
       const approveFlags = {
@@ -450,6 +595,7 @@ try {
     }
 
     case 'model-smoke': {
+      requireAdvancedCommand('model-smoke');
       const apiKey = requireApiKey('model-smoke');
       const model = String(flags.get('model') ?? DEFAULT_MODEL);
       const trials = intFlag('trials', 3);
@@ -477,6 +623,7 @@ try {
     }
 
     case 'model-experiment': {
+      requireAdvancedCommand('model-experiment');
       const apiKey = requireApiKey('model-experiment');
       const model = String(flags.get('model') ?? DEFAULT_MODEL);
       const trials = intFlag('trials', 3);
@@ -512,6 +659,7 @@ try {
     }
 
     case 'model-replay': {
+      requireAdvancedCommand('model-replay');
       const apiKey = requireApiKey('model-replay');
       const model = str('model') ?? fail('model-replay requires an explicit --model <name>');
       const suitePath = str('suite') ?? fail('model-replay requires --suite <path-to-suite.json>');
@@ -628,6 +776,7 @@ try {
     }
 
     case 'fs-model-smoke': {
+      requireAdvancedCommand('fs-model-smoke');
       const apiKey = requireApiKey('fs-model-smoke');
       const model = String(flags.get('model') ?? DEFAULT_MODEL);
       const trials = intFlag('trials', 3);
@@ -654,6 +803,7 @@ try {
     }
 
     case 'fs-model-experiment': {
+      requireAdvancedCommand('fs-model-experiment');
       const apiKey = requireApiKey('fs-model-experiment');
       const model = String(flags.get('model') ?? DEFAULT_MODEL);
       const trials = intFlag('trials', 3);
@@ -686,6 +836,7 @@ try {
     }
 
     case 'fs-model-replay': {
+      requireAdvancedCommand('fs-model-replay');
       const apiKey = requireApiKey('fs-model-replay');
       const model = str('model') ?? fail('fs-model-replay requires an explicit --model <name>');
       const suitePath = str('suite') ?? fail('fs-model-replay requires --suite <path-to-suite.json>');
@@ -772,6 +923,7 @@ try {
     }
 
     case 'issue-model-smoke': {
+      requireAdvancedCommand('issue-model-smoke');
       const apiKey = requireApiKey('issue-model-smoke');
       const model = String(flags.get('model') ?? DEFAULT_MODEL);
       const trials = intFlag('trials', 3);
@@ -798,6 +950,7 @@ try {
     }
 
     case 'issue-model-experiment': {
+      requireAdvancedCommand('issue-model-experiment');
       const apiKey = requireApiKey('issue-model-experiment');
       const model = String(flags.get('model') ?? DEFAULT_MODEL);
       const trials = intFlag('trials', 3);
@@ -830,6 +983,7 @@ try {
     }
 
     case 'issue-model-replay': {
+      requireAdvancedCommand('issue-model-replay');
       const apiKey = requireApiKey('issue-model-replay');
       const model = str('model') ?? fail('issue-model-replay requires an explicit --model <name>');
       const suitePath = str('suite') ?? fail('issue-model-replay requires --suite <path-to-suite.json>');
@@ -863,7 +1017,7 @@ try {
       fail(`unknown command '${command}' — run \`oculory help\``);
   }
 } catch (err) {
-  process.stderr.write(`oculory: ${err instanceof Error ? err.message : String(err)}\n`);
+  process.stderr.write(`oculory: ${sanitizeDiagnostic(err instanceof Error ? err.message : String(err), [process.cwd()])}\n`);
   process.exit(3);
 }
 }
@@ -988,24 +1142,106 @@ function openModelRun(opts: {
   return rs;
 }
 
-function help(): void {
-  process.stdout.write(`oculory — trace-derived regression testing for MCP servers
+function publicRunStore(): PublicRunStore {
+  try {
+    return new PublicRunStore(join(String(flags.get('store') ?? '.oculory'), 'runs'));
+  } catch (error) {
+    return usageFailure(error);
+  }
+}
 
-Pipeline:   record → verify → mine → review → approve → suite → run → compare
+function resolvePublicContractPath(): string {
+  const explicit = str('contract');
+  if (explicit !== null) return resolve(explicit);
+  const taskPath = str('task');
+  if (taskPath !== null) {
+    const task = loadTaskConfig(taskPath).value;
+    return resolve('oculory.contracts', `${task.task_id}.yaml`);
+  }
+  const directory = resolve('oculory.contracts');
+  if (!existsSync(directory)) fail('no contract found: run `oculory approve <run-id>` or pass --contract <path>');
+  const candidates = readdirSync(directory)
+    .filter((name) => /\.ya?ml$/i.test(name))
+    .sort();
+  if (candidates.length === 0) fail('no contract found: run `oculory approve <run-id>` or pass --contract <path>');
+  if (candidates.length > 1) fail('multiple contracts found; pass --contract <path>');
+  return join(directory, candidates[0]!);
+}
+
+function useColor(): boolean {
+  return process.stdout.isTTY === true && process.env.NO_COLOR === undefined && !asJson;
+}
+
+function terminalWidth(): number {
+  return Math.max(48, Math.min(process.stdout.columns ?? 80, 120));
+}
+
+function usageFailure(error: unknown): never {
+  return fail(error instanceof Error ? error.message : String(error), 1);
+}
+
+function requirePublicMlpExecutionSupport(): void {
+  try {
+    assertPublicMlpExecutionSupported();
+  } catch (error) {
+    usageFailure(error);
+  }
+}
+
+function requireAdvancedCommand(name: string): void {
+  if (!advancedMode) fail(`'${name}' is an internal research command; use oculory advanced ${name}`);
+}
+
+function help(): void {
+  if (!advancedMode) {
+    process.stdout.write(`oculory: behavioral regression testing for MCP agents
+
+Usage: oculory <command> [flags]
+
+Public workflow:
+  record <task.yaml>         record MCP traffic and independently observed state
+  approve <run-id>           draft an editable contract from one approved run
+  replay --model <profile>   replay the contract and enforce its threshold
+
+  demo                       run the provider-free contradiction walkthrough
+  show <run-id> --diff       reconstruct a saved contradiction without rerunning
+  doctor                     check the local environment
+  version                    print the package version
+  help                       show this help
+
+Internal research tools remain available under:
+  oculory advanced help
+`);
+    return;
+  }
+  process.stdout.write(`oculory — behavioral regression testing for MCP agents
+
 Usage:      oculory <command> [flags]
 
+Public workflow:
+  record <task.yaml>         record real MCP traffic and independently observed state
+  approve <run-id>           draft an editable contract from one approved run
+  replay --model <profile>   replay 12 runs and enforce the contract threshold
+
+  demo                       run the provider-free 12/12 versus 3/12 walkthrough
+  show <run-id> --diff       reconstruct a saved contradiction without rerunning
+  doctor                     check the local environment
   version                    print the package version
+  help                       show this help
+
+Advanced / research commands (use oculory advanced <command> ...):
+  Pipeline: record → verify → mine → review → approve → suite → run → compare
   init                       create the .oculory store
   doctor [--model <name>]    check environment (node, sqlite, fixture, gitignore, .env, key)
   inspect [--mutation id]    list the demo server's tools
   scenarios                  list the scenario catalogue
-  record --all|--smoke|<id…> record traffic (flags: --policy scripted|model|<id>, --mutation,
+  record --all|--smoke|<id…> advanced trace recording (flags: --policy scripted|model|<id>, --mutation,
                              --model <name>, --trials N, --budget-usd <cap>; model policy
                              reads OPENAI_API_KEY from the environment only)
   verify [--run-dir <dir>]   verify outcomes + normalise traces
   mine [--run-dir <dir>]     mine candidate assertions (annotated with risk inside a run dir)
   review [--run-dir <dir>]   print the candidate review table (+ provenance/risk in a run dir)
-  approve <id>|--all-stable  approve candidates (--reason, --reviewed-by; model-safety flags:
+  approve <id>|--all-stable  advanced candidate approval (--reason, --reviewed-by; safety flags:
                              --allow-smoke --allow-unstable --allow-risky)
   reject <id> --reason "…"   reject a candidate
   suite [--run-dir <dir>]    compile approved candidates into a versioned suite

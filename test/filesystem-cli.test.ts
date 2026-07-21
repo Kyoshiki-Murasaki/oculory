@@ -11,7 +11,7 @@ function cli(args: string[], env: Record<string, string | undefined> = {}): { co
 }
 
 test('fs CLI: help lists the filesystem commands', () => {
-  const r = cli(['help']);
+  const r = cli(['advanced', 'help']);
   assert.equal(r.code, 0);
   for (const cmd of ['fs-inspect', 'fs-scenarios', 'fs-experiment', 'fs-model-smoke', 'fs-model-experiment', 'fs-model-replay']) {
     assert.match(r.out, new RegExp(cmd), `help should mention ${cmd}`);
@@ -38,23 +38,23 @@ test('fs CLI: fs-scenarios and fs-mutate are selectable and non-empty', () => {
 /* These fail BEFORE any network call — no test hits a real API. */
 
 test('fs CLI: fs-model-smoke without OPENAI_API_KEY fails clearly (exit 1, no network)', () => {
-  const r = cli(['fs-model-smoke', '--model', 'gpt-4.1-mini'], { OPENAI_API_KEY: '' });
+  const r = cli(['advanced', 'fs-model-smoke', '--model', 'gpt-4.1-mini'], { OPENAI_API_KEY: '' });
   assert.equal(r.code, 1);
   assert.match(r.err, /OPENAI_API_KEY/);
 });
 
 test('fs CLI: fs-model-experiment rejects an invalid --partition (exit 1)', () => {
-  const r = cli(['fs-model-experiment', '--partition', 'bogus'], { OPENAI_API_KEY: 'sk-fake-not-real' });
+  const r = cli(['advanced', 'fs-model-experiment', '--partition', 'bogus'], { OPENAI_API_KEY: 'sk-fake-not-real' });
   assert.equal(r.code, 1);
   assert.match(r.err, /--partition must be one of/);
 });
 
 test('fs CLI: fs-model-replay requires --suite and an existing file', () => {
-  const noSuite = cli(['fs-model-replay', '--model', 'gpt-4.1-mini', '--budget-usd', '5'], { OPENAI_API_KEY: 'sk-fake-not-real' });
+  const noSuite = cli(['advanced', 'fs-model-replay', '--model', 'gpt-4.1-mini', '--budget-usd', '5'], { OPENAI_API_KEY: 'sk-fake-not-real' });
   assert.equal(noSuite.code, 1);
   assert.match(noSuite.err, /--suite/);
 
-  const missing = cli(['fs-model-replay', '--model', 'gpt-4.1-mini', '--budget-usd', '5', '--suite', '/no/such/fs-suite.json'], { OPENAI_API_KEY: 'sk-fake-not-real' });
+  const missing = cli(['advanced', 'fs-model-replay', '--model', 'gpt-4.1-mini', '--budget-usd', '5', '--suite', '/no/such/fs-suite.json'], { OPENAI_API_KEY: 'sk-fake-not-real' });
   assert.equal(missing.code, 1);
   assert.match(missing.err, /does not exist/);
 });
